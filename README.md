@@ -1,2 +1,183 @@
-# mcp-planning
-It is a MCP agent based on planning pattern.
+# Dae Project
+
+## MCP Tool Deployment
+
+여기에서는 AgentCore Runtime을 이용해 MCP tool을 배포하는것에 대해 설명합니다. 전체적인 architecture는 아래와 같습니다. 사용자는 Streamlit으로 구현된 application을 통해 질문을 입력할 수 있고, LangGraph/Strands agent를 선택하여 활용합니다. 여기에서는 Knowledge base를 조회하는 kb-retriever와 AWS infrastructure를 관리할 수 있는 use-aws를 MCP tool로 제공하며, 이 tool들은 AgentCore에 runtime으로 배포됩니다.
+
+<img width="800" alt="image" src="https://github.com/user-attachments/assets/62e33c60-543f-42bf-9962-33daf13c4c00" />
+
+
+### Agent Tool 배포를 위한 준비
+
+AgentCore로 배포하기 위해서는 MCP 설정시 [mcp_server_retrieve.py](./kb-retriever/mcp_server_retrieve.py)와 같이 host를 "0.0.0.0"으로 설정하고 외부로는 [Dockerfile](./kb-retriever/Dockerfile)와 같이 8000 포트를 expose 합니다.
+
+```python
+mcp = FastMCP(
+    name = "mcp-retrieve",
+    instructions=(
+        "You are a helpful assistant. "
+        "You retrieve documents in RAG."
+    ),
+    host="0.0.0.0",
+    stateless_http=True
+)
+```
+
+AgentCore의 runtime으로 MCP를 배포한 후에 활용할 때에는 bearer token을 이용해 인증을 수행합니다. bearer token은 Cognito와 같은 서비스를 통해 생성할 수 있습니다. 아래와 같이 Cognito에 정의한 username/password를 이용해 access token를 생성합니다.
+
+```python
+client = boto3.client('cognito-idp', region_name=region)
+response = client.initiate_auth(
+    ClientId=client_id,
+    AuthFlow='USER_PASSWORD_AUTH',
+    AuthParameters={
+        'USERNAME': username,
+        'PASSWORD': password
+    }
+)
+auth_result = response['AuthenticationResult']
+access_token = auth_result['AccessToken']
+```
+
+AgentCore에 MCP runtime을 배포하면 agent_arn을 얻을 수 있습니다. 이 값은 AgentCore에서 생성할 때 알 수 있으며, 아래와 같이 agent_runtime_name을 가지고 검색할 수도 있습니다.
+
+```python
+client = boto3.client('bedrock-agentcore-control', region_name='us-west-2')
+response = client.list_agent_runtimes()
+agentRuntimes = response['agentRuntimes']
+for agentRuntime in agentRuntimes:
+    if agentRuntime["agentRuntimeName"] == agent_runtime_name:
+        return agentRuntime["agentRuntimeArn"]
+```    
+
+Agent의 arn을 url encoding해서 아래와 같이 mcp_url을 생성합니다. 이때 header의 Authorization에 Cognito를 이용해 생성한 bearer token을 입력합니다.
+
+```python
+encoded_arn = agent_arn.replace(':', '%3A').replace('/', '%2F')    
+mcp_url = f"https://bedrock-agentcore.{region}.amazonaws.com/runtimes/{encoded_arn}/invocations?qualifier=DEFAULT"
+headers = {
+    "Authorization": f"Bearer {bearer_token}",
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/event-stream"
+}
+```
+
+이제 mcp_url, headers는 아래와 같이 MCP server의 설정 정보로 활용됩니다.
+
+```python
+"mcpServers": {
+    "kb-retriever": {
+        "type": "streamable_http",
+        "url": f"https://bedrock-agentcore.{region}.amazonaws.com/runtimes/{encoded_arn}/invocations?qualifier=DEFAULT",
+        "headers": {
+            "Authorization": f"Bearer {bearer_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream"
+        }
+    }
+}
+```
+
+
+
+
+### Deployment
+
+아래와 같이 IAM policy를 생성합니다. 생성된 policy의 이름은 BedrockAgentCoreMCPRoleFor에 project name을 합한 형태입니다.
+
+```text
+python create_iam_policies.py
+```
+
+MCP server 인증시 사용할 bearer token을 등록합니다. 여기서는 Cognito의 access token으로 bearer token을 생성하고 secret manager에 등록합니다.
+
+```text
+python create_bearer_token.py
+```
+
+MCP runtime을 생성하기 위해 ECR에 이미지를 푸쉬합니다.
+
+```text
+./push-to-ecr.sh
+```
+
+이제 AgentCore에 MCP runtime을 생성합니다.
+
+```text
+python create_mcp_runtime.py
+```
+
+배포가 정상적으로 되었는지 아래와 같이 확인할 수 있습니다.
+
+```text
+python test_mcp_remote.py
+```
+
+이때의 결과는 아래와 같습니다.
+
+<img width="600" alt="noname" src="https://github.com/user-attachments/assets/5bc2ce14-5ad5-43b2-a6f4-2a359b76bfe4" />
+
+
+### Local Test
+
+MCP 서버는 아래와 같이 실행합니다.
+
+```text
+python mcp_server_use_aws.py
+```
+
+기본 Client의 실행은 아래와 같습니다. 아래 [mcp_client.py](./mcp_client.py)은 streamable http로 "http://localhost:8000/mcp" 로 연결할 수 있는 MCP 서버의 정보를 가져와 사용할 수 있는 tool에 대한 정보를 제공합니다. 
+
+```text
+python mcp_client.py
+```
+
+### AgentCore CLI
+
+아래와 같이 [AgentCore Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit)을 설치합니다. 
+
+```text
+pip install bedrock-agentcore-starter-toolkit
+```
+
+이후 아래와 설치를 준비합니다. 아래 명령어로 [Dockerfile](./Dockerfile)과 [.bedrock_agentcore.yaml](./.bedrock_agentcore.yaml)이 생성됩니다. 
+
+```text
+python setup.py
+```
+
+AgentCore의 상태는 아래 명령어로 확인할 수 있습니다.
+
+```text
+agentcore status
+```
+
+생성된 Docker 파일을 배포합니다.
+
+```text
+agentcore launch
+```
+
+이후 아래와 같이 동작을 확인할 수 있습니다.
+
+```text
+# Invoke your deployed agent
+agentcore invoke '{"prompt": "Hello from Bedrock AgentCore!"}'
+```
+
+## 실행 결과
+
+왼쪽 메뉴의 MCP Config에서 "규격이 80mm인 감압밸브(조당) 설치에 필요한 배관공과 보통인부의 인력 수량은 얼마입니까?"로 입력하면, Streamable HTTP를 지원하는 knowledge base MCP에 접속하여 관련된 문서를 아래와 같이 가져와서 답변할 수 있습니다.
+
+<img width="900" alt="image" src="https://github.com/user-attachments/assets/83b67178-29b0-4dd5-a341-93ad414bcc4c" />
+
+
+## Reference 
+
+[Hosting MCP Server on Amazon Bedrock AgentCore Runtime](https://github.com/awslabs/amazon-bedrock-agentcore-samples/blob/main/01-tutorials/01-AgentCore-runtime/02-hosting-MCP-server/hosting_mcp_server.ipynb)
+
+[Bedrock AgentCore Starter Toolkit](https://github.com/aws/bedrock-agentcore-starter-toolkit)
+
+[LangChain MCP Adapters](https://github.com/langchain-ai/langchain-mcp-adapters)
+
+[Strands Agents](https://github.com/strands-agents/sdk-python)
