@@ -7,7 +7,8 @@ import sys
 import os
 import pwd 
 import asyncio
-import uuid
+import strands_planning
+import langgraph_planning
 
 logging.basicConfig(
     level=logging.INFO,  # Default to INFO level
@@ -73,7 +74,7 @@ with st.sidebar:
     st.info(mode_descriptions[mode][0])
     
     # mcp selection    
-    if mode=='Agent' or mode=='Agent (Chat)':
+    if mode=='Agent' or mode=='Agent (Chat)' or mode=="Planning Agent":
         # MCP Config JSON input
         st.subheader("⚙️ MCP Config")
 
@@ -84,10 +85,9 @@ with st.sidebar:
         mcp_selections = {}
         default_selections = ["tavily-search"]
         
-        if mode=='Agent' or mode=='Agent (Chat)' or mode=='Planning Agent':
-            agentType = st.radio(
-                label="Agent 타입을 선택하세요. ",options=["langgraph", "strands"], index=0
-            )
+        agentType = st.radio(
+            label="Agent 타입을 선택하세요. ",options=["langgraph", "strands"], index=0
+        )
 
         with st.expander("MCP 옵션 선택", expanded=True):            
             for option in mcp_options:
@@ -117,11 +117,11 @@ with st.sidebar:
                 try:
                     mcp_config.mcp_user_config = json.loads(mcp_info)
                     logger.info(f"mcp_user_config: {mcp_config.mcp_user_config}")                    
-                    st.success("JSON 설정이 성공적으로 로드되었습니다.")                    
+                    st.success("JSON configuration loaded successfully.")                    
                 except json.JSONDecodeError as e:
-                    st.error(f"JSON 파싱 오류: {str(e)}")
-                    st.error("올바른 JSON 형식으로 입력해주세요.")
-                    logger.error(f"JSON 파싱 오류: {str(e)}")
+                    st.error(f"JSON parsing error: {str(e)}")
+                    st.error("Please enter a valid JSON format.")
+                    logger.error(f"JSON parsing error: {str(e)}")
                     mcp_config.mcp_user_config = {}
             else:
                 mcp_config.mcp_user_config = {}
@@ -234,6 +234,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
     logger.info(f"prompt: {prompt}")
 
     with st.chat_message("assistant"):
+        image_url = []
         if mode == 'Agent' or mode == 'Agent (Chat)':            
             sessionState = ""
             if mode == 'Agent':
@@ -263,7 +264,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                         history_mode=history_mode, 
                         containers=containers))
             
-        elif mode == 'Planning Agent':
+        elif mode == "Planning Agent":
             containers = {
                 "tools": st.empty(),
                 "status": st.empty(),
@@ -271,15 +272,19 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             }
 
             if agentType == "langgraph":
-                response, image_url = asyncio.run(chat.run_langgraph_planning_agent(
+                response, image_url = asyncio.run(langgraph_planning.run_langgraph_planning_agent(
                     query=prompt, 
                     mcp_servers=mcp_servers,
                     containers=containers))
             else:
-                response, image_url = asyncio.run(chat.run_strands_planning_agent(
-                query=prompt, 
-                mcp_servers=mcp_servers,
-                containers=containers))
+                # response, image_url = asyncio.run(chat.run_strands_planning_agent(
+                # query=prompt, 
+                # mcp_servers=mcp_servers,
+                # containers=containers))
+
+                response = asyncio.run(strands_planning.run_plan_and_execute_with_graph(
+                    prompt, 
+                    containers))
         
         st.session_state.messages.append({
             "role": "assistant", 

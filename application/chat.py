@@ -364,76 +364,6 @@ def get_chat(extended_thinking):
 
     return chat
 
-def translate_text(text):
-    chat = get_chat(extended_thinking=reasoning_mode)
-
-    system = (
-        "You are a helpful assistant that translates {input_language} to {output_language} in <article> tags. Put it in <result> tags."
-    )
-    human = "<article>{text}</article>"
-    
-    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
-    # print('prompt: ', prompt)
-    
-    if isKorean(text)==False :
-        input_language = "English"
-        output_language = "Korean"
-    else:
-        input_language = "Korean"
-        output_language = "English"
-                        
-    chain = prompt | chat    
-    try: 
-        result = chain.invoke(
-            {
-                "input_language": input_language,
-                "output_language": output_language,
-                "text": text,
-            }
-        )
-        msg = result.content
-        logger.info(f"translated text: {msg}")
-    except Exception:
-        err_msg = traceback.format_exc()
-        logger.info(f"error message: {err_msg}")      
-        raise Exception ("Not able to request to LLM")
-
-    return msg[msg.find('<result>')+8:len(msg)-9] # remove <result> tag
-    
-def check_grammer(text):
-    chat = get_chat(extended_thinking=reasoning_mode)
-
-    if isKorean(text)==True:
-        system = (
-            "다음의 <article> tag안의 문장의 오류를 찾아서 설명하고, 오류가 수정된 문장을 답변 마지막에 추가하여 주세요."
-        )
-    else: 
-        system = (
-            "Here is pieces of article, contained in <article> tags. Find the error in the sentence and explain it, and add the corrected sentence at the end of your answer."
-        )
-        
-    human = "<article>{text}</article>"
-    
-    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
-    # print('prompt: ', prompt)
-    
-    chain = prompt | chat    
-    try: 
-        result = chain.invoke(
-            {
-                "text": text
-            }
-        )
-        
-        msg = result.content
-        logger.info(f"result of grammer correction: {msg}")
-    except Exception:
-        err_msg = traceback.format_exc()
-        logger.info(f"error message: {err_msg}")       
-        raise Exception ("Not able to request to LLM")
-    
-    return msg
-
 reference_docs = []
 
 def isKorean(text):
@@ -770,7 +700,7 @@ async def run_strands_agent(query, strands_tools, mcp_servers, history_mode, con
                     logger.info(f"new tool info: {toolUseId} -> {index}")
                     tool_info_list[toolUseId] = index
                     tool_name_list[toolUseId] = name
-                    add_notification(containers, f"Tool: {name}, Input: {input}")
+                    # add_notification(containers, f"Tool: {name}, Input: {input}")
                 else: # overwrite tool info if already exists
                     logger.info(f"overwrite tool info: {toolUseId} -> {tool_info_list[toolUseId]}")
                     containers['notification'][tool_info_list[toolUseId]].info(f"Tool: {name}, Input: {input}")
@@ -915,7 +845,7 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
                                 toolUseId = content_item.get('id', '')
                                 tool_name = content_item.get('name', '')
                                 logger.info(f"tool_name: {tool_name}, toolUseId: {toolUseId}")
-                                add_notification(containers, f"Tool: {tool_name}, Input: {input}")
+                                # add_notification(containers, f"Tool: {tool_name}, Input: {input}")
 
                                 tool_info_list[toolUseId] = index                     
                                 tool_name_list[toolUseId] = tool_name     
