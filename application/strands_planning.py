@@ -264,7 +264,7 @@ async def planning_agent(question, containers):
     return result
 
 # currently cyclic graph is not supported (Sep. 10 2025)
-async def run_plan_and_execute_with_graph(question: str, containers: dict):
+async def run_strands_agent_with_plan(question: str, containers: dict):
     global status_msg
     status_msg = []
 

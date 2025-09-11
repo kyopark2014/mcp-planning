@@ -49,7 +49,10 @@ mode_descriptions = {
         "MCP를 활용한 Agent를 이용합니다. 채팅 히스토리를 이용해 interative한 대화를 즐길 수 있습니다."
     ],
     "Planning Agent": [
-        "MCP를 활용한 Planning Agent를 이용합니다. 왼쪽 메뉴에서 필요한 MCP를 선태하세요."
+        "Planning Agent와 MCP를 활용하는 Execute Agent를 이용합니다 (multi-agent). 왼쪽 메뉴에서 필요한 MCP를 선태하세요."
+    ],
+    "Agent with Plan": [
+        "Plan이 추가된 LangGraph MCP Agent를 이용합니다 (single-agent). 왼쪽 메뉴에서 필요한 MCP를 선태하세요."
     ]
 }
 
@@ -69,12 +72,12 @@ with st.sidebar:
     
     # radio selection
     mode = st.radio(
-        label="원하는 대화 형태를 선택하세요. ",options=["Agent", "Agent (Chat)", "Planning Agent"], index=2
+        label="원하는 대화 형태를 선택하세요. ",options=["Agent", "Agent (Chat)", "Planning Agent", "Agent with Plan"], index=3
     )   
     st.info(mode_descriptions[mode][0])
     
     # mcp selection    
-    if mode=='Agent' or mode=='Agent (Chat)' or mode=="Planning Agent":
+    if mode=='Agent' or mode=='Agent (Chat)' or mode=="Planning Agent" or mode=="Agent with Plan":
         # MCP Config JSON input
         st.subheader("⚙️ MCP Config")
 
@@ -287,6 +290,26 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                     #mcp_servers=mcp_servers, 
                     containers=containers))
         
+        elif mode == "Agent with Plan":
+            containers = {
+                "plan": st.empty(),
+                "tools": st.empty(),
+                "status": st.empty(),
+                "notification": [st.empty() for _ in range(500)]
+            }
+            
+            if agentType == "langgraph":
+                response, image_url = asyncio.run(chat.run_langgraph_agent_with_plan(
+                    query=prompt, 
+                    mcp_servers=mcp_servers, 
+                    containers=containers))
+            else:
+                response, image_url = asyncio.run(strands_planning.run_strands_agent_with_plan(
+                    query=prompt, 
+                    #strands_tools=[], 
+                    #mcp_servers=mcp_servers, 
+                    containers=containers))
+            
         st.session_state.messages.append({
             "role": "assistant", 
             "content": response,
