@@ -39,7 +39,7 @@ logger.info(f"environment: {environment}")
 os.environ["DEV"] = "true"  # Skip user confirmation of get_user_input
 
 # title
-st.set_page_config(page_title='Streamable MCP', page_icon=None, layout="centered", initial_sidebar_state="auto", menu_items=None)
+st.set_page_config(page_title='Planning', page_icon=None, layout="centered", initial_sidebar_state="auto", menu_items=None)
 
 mode_descriptions = {    
     "Agent": [
@@ -272,7 +272,7 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             }
 
             if agentType == "langgraph":
-                response, image_url = asyncio.run(langgraph_planning.run_langgraph_planning_agent(
+                response, image_url = asyncio.run(langgraph_planning.planning_agent(
                     query=prompt, 
                     mcp_servers=mcp_servers,
                     containers=containers))
@@ -282,9 +282,10 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                 # mcp_servers=mcp_servers,
                 # containers=containers))
 
-                response = asyncio.run(strands_planning.run_plan_and_execute_with_graph(
-                    prompt, 
-                    containers))
+                response = asyncio.run(strands_planning.planning_agent(
+                    question=prompt, 
+                    #mcp_servers=mcp_servers, 
+                    containers=containers))
         
         st.session_state.messages.append({
             "role": "assistant", 

@@ -16,15 +16,16 @@ logging.basicConfig(
 
 logger = logging.getLogger("chat")
 
-async def plan_agent(query: str):
+async def plan_agent(query: str, containers: dict):
     tools = []
-    app = langgraph_agent.buildChatAgentWithHistory(tools)
+    app = langgraph_agent.buildChatAgent(tools)
 
     system_prompt=(
         "For the given objective, come up with a simple step by step plan."
-        "This plan should involve individual tasks, that if executed correctly will yield the correct answer. Do not add any superfluous steps."
+        "This plan should involve individual tasks, that if executed correctly will yield the correct answer." 
+        "Do not add any superfluous steps."
         "The result of the final step should be the final answer. Make sure that each step has all the information needed - do not skip steps."
-        "생성된 계획은 <plan> 태그로 감싸서 반환합니다."
+        "The plan should be returned in <plan> tag."
     )
 
     config = {
@@ -38,27 +39,33 @@ async def plan_agent(query: str):
         "messages": [HumanMessage(content=query)]
     }
 
-    result = await app.ainvoke(inputs, config)
+    response = await app.ainvoke(inputs, config)
+    logger.info(f"response: {response}")
+    result = response['messages'][-1].content
     logger.info(f"result: {result}")
-    
-    return result
+    # result = ""    
+    # async for stream in app.astream(inputs, config, stream_mode="messages"):
+    #     if isinstance(stream[0], AIMessageChunk):
+    #         message = stream[0]    
+    #         if isinstance(message.content, list):
+    #             for content_item in message.content:
+    #                 if isinstance(content_item, dict):
+    #                     if content_item.get('type') == 'text':
+    #                         text_content = content_item.get('text', '')
+    #                         result += text_content                                
+    #                         chat.update_streaming_result(containers, result, "info")
 
-async def run_langgraph_planning_agent(query: str, mcp_servers: list, containers: dict):    
-    chat.index = 0
+    logger.info(f"result: {result}")
 
+    plan = result[result.find('<plan>')+6:result.find('</plan>')]
+    logger.info(f"plan: {plan}")
+
+    return plan
+
+async def execute_agent(query: str, plan: str, mcp_servers: list, containers: dict):
     image_url = []
     references = []
-
-    result = await plan_agent(query)
-
-    plan = result['messages'][-1].content
-
-    plan = plan.replace("<plan>", "").replace("</plan>", "")
-    logger.info(f"plan: {plan}")
-    chat.add_notification(containers, plan)
-
-    logger.info(f"=== Use Plan to Execute ===")
-
+    
     mcp_json = mcp_config.load_selected_config(mcp_servers)
     logger.info(f"mcp_json: {mcp_json}")
 
@@ -91,7 +98,7 @@ async def run_langgraph_planning_agent(query: str, mcp_servers: list, containers
             containers['notification'][0].markdown(result)
         return result, image_url
     
-    app = langgraph_agent.buildChatAgentWithHistory(tools)
+    app = langgraph_agent.buildChatAgent(tools)
 
     system_prompt=(
         "You are an executor who executes the plan."
@@ -115,12 +122,9 @@ async def run_langgraph_planning_agent(query: str, mcp_servers: list, containers
     tool_used = False  # Track if tool was used
     tool_name = toolUseId = ""
     
-    async for output in app.astream(inputs, config, stream_mode="messages"):
-        # logger.info(f"output: {output}")
-
-        # Handle tuple output (message, metadata)
-        if isinstance(output, tuple) and len(output) > 0 and isinstance(output[0], AIMessageChunk):
-            message = output[0]    
+    async for stream in app.astream(inputs, config, stream_mode="messages"):
+        if isinstance(stream[0], AIMessageChunk):
+            message = stream[0]    
             input = {}        
             if isinstance(message.content, list):
                 for content_item in message.content:
@@ -137,7 +141,7 @@ async def run_langgraph_planning_agent(query: str, mcp_servers: list, containers
                                 result += text_content
                                 
                             # logger.info(f"result: {result}")                
-                            chat.update_streaming_result(containers, result)
+                            chat.update_streaming_result(containers, result, "markdown")
 
                         elif content_item.get('type') == 'tool_use':
                             logger.info(f"content_item: {content_item}")      
@@ -145,11 +149,9 @@ async def run_langgraph_planning_agent(query: str, mcp_servers: list, containers
                                 toolUseId = content_item.get('id', '')
                                 tool_name = content_item.get('name', '')
                                 logger.info(f"tool_name: {tool_name}, toolUseId: {toolUseId}")
-                                # chat.add_notification(containers, f"Tool: {tool_name}, Input: {input}")
+                                chat.streaming_index = chat.index
+                                chat.index += 1
 
-                                chat.tool_info_list[toolUseId] = chat.index                     
-                                chat.tool_name_list[toolUseId] = tool_name     
-                                                                    
                             if 'partial_json' in content_item:
                                 partial_json = content_item.get('partial_json', '')
                                 logger.info(f"partial_json: {partial_json}")
@@ -161,12 +163,10 @@ async def run_langgraph_planning_agent(query: str, mcp_servers: list, containers
                                 logger.info(f"input: {input}")
 
                                 logger.info(f"tool_name: {tool_name}, input: {input}, toolUseId: {toolUseId}")
-                                # add_notification(containers, f"Tool: {tool_name}, Input: {input}")
-                                index = chat.tool_info_list[toolUseId]
-                                containers['notification'][index-1].info(f"Tool: {tool_name}, Input: {input}")
+                                chat.update_streaming_result(containers, f"Tool: {tool_name}, Input: {input}", "info")
                         
-        elif isinstance(output, tuple) and len(output) > 0 and isinstance(output[0], ToolMessage):
-            message = output[0]
+        elif isinstance(stream[0], ToolMessage):
+            message = stream[0]
             logger.info(f"ToolMessage: {message.name}, {message.content}")
             tool_name = message.name
             toolResult = message.content
@@ -192,14 +192,27 @@ async def run_langgraph_planning_agent(query: str, mcp_servers: list, containers
         result = "답변을 찾지 못하였습니다."        
     logger.info(f"result: {result}")
 
-    # if references:
-    #     ref = "\n\n### Reference\n"
-    #     for i, reference in enumerate(references):
-    #         page_content = reference['content'][:100].replace("\n", "")
-    #         ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
-    #     result += ref
-    
     if containers is not None:
-        containers['notification'][index].markdown(result)
+        containers['notification'][chat.index].markdown(result)
     
     return result, image_url
+
+async def planning_agent(query: str, mcp_servers: list, containers: dict):    
+    chat.index = 0
+
+    chat.add_notification(containers, f"계획을 생성하는 중입니다...")
+    plan = await plan_agent(query, containers)
+
+    logger.info(f"=== Use Plan Agent ===")    
+    
+    logger.info(f"plan: {plan}")
+    chat.add_notification(containers, f"생성된 계획:\n{plan}")
+
+    logger.info(f"=== Use Execute Agent ===")
+    result, image_url = await execute_agent(query, plan, mcp_servers, containers)
+
+    logger.info(f"result: {result}")
+    logger.info(f"image_url: {image_url}")
+
+    return result, image_url
+    

@@ -2,9 +2,10 @@
 import logging
 import sys
 import mcp_config
+import chat
+
 from strands.tools.mcp import MCPClient
 from mcp import stdio_client, StdioServerParameters
-
 from strands.multiagent import GraphBuilder
 from strands import Agent
 
@@ -16,78 +17,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("strands-agent")
-
-index = 0
-def add_notification(containers, message):
-    global index
-    containers['notification'][index].info(message)
-    index += 1
-
-def add_response(containers, message):
-    global index
-    containers['notification'][index].markdown(message)
-    index += 1
-
-streaming_index = None
-
-def update_streaming_result(containers, message):
-    global streaming_index
-    streaming_index = index 
-
-    if containers is not None:
-        containers['notification'][streaming_index].markdown(message)
-
-def update_tool_notification(containers, tool_index, message):
-    if containers is not None:
-        containers['notification'][tool_index].info(message)
-
-tool_info_list = dict()
-tool_result_list = dict()
-tool_name_list = dict()
-
-async def show_result(graph_result, containers):
-    """Batch processing for GraphResult object"""
-    result = ""
-    
-    # Debug: Log the GraphResult object structure
-    logger.info(f"GraphResult type: {type(graph_result)}")
-    logger.info(f"GraphResult attributes: {[attr for attr in dir(graph_result) if not attr.startswith('_')]}")
-    
-    # Process execution order information
-    if hasattr(graph_result, 'execution_order'):
-        add_notification(containers, "=== Execution Order ===")
-        for node in graph_result.execution_order:
-            add_notification(containers, f"Executed: {node.node_id}")
-    
-    # Process performance metrics
-    if hasattr(graph_result, 'total_nodes'):
-        add_notification(containers, f"Total nodes: {graph_result.total_nodes}")
-    if hasattr(graph_result, 'completed_nodes'):
-        add_notification(containers, f"Completed nodes: {graph_result.completed_nodes}")
-    if hasattr(graph_result, 'failed_nodes'):
-        add_notification(containers, f"Failed nodes: {graph_result.failed_nodes}")
-    if hasattr(graph_result, 'execution_time'):
-        add_notification(containers, f"Execution time: {graph_result.execution_time}ms")
-    if hasattr(graph_result, 'accumulated_usage'):
-        add_notification(containers, f"Token usage: {graph_result.accumulated_usage}")
-    
-    # Process specific node results and combine them
-    if hasattr(graph_result, 'results'):
-        add_notification(containers, "=== Individual Node Results ===")
-        node_results = []
-        for node_id, node_result in graph_result.results.items():
-            if hasattr(node_result, 'result'):
-                node_content = f"{node_id}: {node_result.result}"
-                add_notification(containers, node_content)
-                node_results.append(node_content)
-        
-        # Combine individual node results as the final result
-        if node_results:
-            result = "\n\n".join(node_results)
-            logger.info(f"Combined result from individual nodes: {result}")
-            update_streaming_result(containers, result)
-    
-    return result
 
 def get_tool_list(tools):
     tool_list = []
@@ -188,13 +117,39 @@ async def show_streams(agent_stream, containers):
     logger.info(f"show_streams result type: {type(result)}")
     return result
 
-async def run_plan_and_execute(question, containers):
+async def planning_agent(question, containers):
     global status_msg
     status_msg = []
 
-    global index
-    index = 0
+    chat.index = 0
 
+    logger.info(f"=== Use Plan Agent ===")
+    chat.add_notification(containers, f"계획을 생성하는 중입니다...")
+
+    # Create specialized agents
+    planner = Agent(
+        name="plan", 
+        system_prompt=(
+            "For the given objective, come up with a simple step by step plan."
+            "This plan should involve individual tasks, that if executed correctly will yield the correct answer. Do not add any superfluous steps."
+            "The result of the final step should be the final answer. Make sure that each step has all the information needed - do not skip steps."
+            "생성된 계획은 <plan> 태그로 감싸서 반환합니다."
+        )
+    )
+
+    #agent_stream = await planner.stream_async(question)
+    #result = await show_result(agent_stream, containers)
+    response = planner(question)
+    logger.info(f"planner result: {response}")
+
+    result = str(response)
+
+    plan = result[result.find('<plan>')+6:result.find('</plan>')]
+    logger.info(f"plan: {plan}")
+
+    chat.add_notification(containers, f"생성된 계획:\n{plan}")
+
+    logger.info(f"=== Use Execute Agent ===")
     tool = "tavily-search"
     config = mcp_config.load_config(tool)
     mcp_servers = config["mcpServers"]
@@ -224,23 +179,7 @@ async def run_plan_and_execute(question, containers):
 
         tool_list = get_tool_list(tools)
         logger.info(f"tools loaded: {tool_list}")
-
-        # Create specialized agents
-        planner = Agent(
-            name="plan", 
-            system_prompt=(
-                "For the given objective, come up with a simple step by step plan."
-                "This plan should involve individual tasks, that if executed correctly will yield the correct answer. Do not add any superfluous steps."
-                "The result of the final step should be the final answer. Make sure that each step has all the information needed - do not skip steps."
-                "생성된 계획은 <plan> 태그로 감싸서 반환합니다."
-            )
-        )
-
-        #agent_stream = await planner.stream_async(question)
-        #result = await show_result(agent_stream, containers)
-        plan = planner(question)
-        logger.info(f"planner result: {plan}")
-
+        
         executor = Agent(
             name="executor", 
             system_prompt=(
@@ -252,10 +191,75 @@ async def run_plan_and_execute(question, containers):
             tools=tools
         )
 
-        result = executor(question)
+        # result = executor(question)
+        agent_stream = executor.stream_async(question)
+        
+        current = ""
+        async for event in agent_stream:
+            text = ""            
+            if "data" in event:
+                text = event["data"]
+                logger.info(f"[data] {text}")
+                current += text
+                chat.update_streaming_result(containers, current, "markdown")
+
+            elif "result" in event:
+                final = event["result"]                
+                message = final.message
+                if message:
+                    content = message.get("content", [])
+                    result = content[0].get("text", "")
+                    logger.info(f"[result] {result}")
+                    final_result = result
+
+            elif "current_tool_use" in event:
+                current_tool_use = event["current_tool_use"]
+                logger.info(f"current_tool_use: {current_tool_use}")
+                name = current_tool_use.get("name", "")
+                input = current_tool_use.get("input", "")
+                toolUseId = current_tool_use.get("toolUseId", "")
+
+                text = f"name: {name}, input: {input}"
+                logger.info(f"[current_tool_use] {text}")
+
+                if toolUseId not in chat.tool_info_list: # new tool info
+                    chat.index += 1
+                    current = ""
+                    logger.info(f"new tool info: {toolUseId} -> {chat.index}")
+                    chat.tool_info_list[toolUseId] = chat.index
+                    chat.tool_name_list[toolUseId] = name
+                    chat.add_notification(containers, f"Tool: {name}, Input: {input}")
+                else: # overwrite tool info if already exists
+                    logger.info(f"overwrite tool info: {toolUseId} -> {chat.tool_info_list[toolUseId]}")
+                    containers['notification'][chat.tool_info_list[toolUseId]].info(f"Tool: {name}, Input: {input}")
+
+            elif "message" in event:
+                message = event["message"]
+                logger.info(f"[message] {message}")
+
+                if "content" in message:
+                    content = message["content"]
+                    logger.info(f"tool content: {content}")
+                    if "toolResult" in content[0]:
+                        toolResult = content[0]["toolResult"]
+                        toolUseId = toolResult["toolUseId"]
+                        toolContent = toolResult["content"]
+                        toolResult = toolContent[0].get("text", "")
+                        tool_name = chat.tool_name_list[toolUseId]
+                        logger.info(f"[toolResult] {toolResult}, [toolUseId] {toolUseId}")
+                        chat.add_notification(containers, f"Tool Result: {str(toolResult)}")
+
+                        if content:
+                            logger.info(f"content: {content}")                
+                
+            elif "contentBlockDelta" or "contentBlockStop" or "messageStop" or "metadata" in event:
+                pass
+
+            else:
+                logger.info(f"event: {event}")
         
         if containers is not None:
-            containers['notification'][index].markdown(result)
+            containers['notification'][chat.index].markdown(result)
 
     return result
 

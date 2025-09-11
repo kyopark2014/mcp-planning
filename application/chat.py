@@ -514,16 +514,15 @@ def add_notification(containers, message):
         containers['notification'][index].info(message)
     index += 1
 
-def update_streaming_result(containers, message):
+def update_streaming_result(containers, message, type):
     global streaming_index
-    streaming_index = index 
+    streaming_index = index
 
     if containers is not None:
-        containers['notification'][streaming_index].markdown(message)
-
-def update_tool_notification(containers, tool_index, message):
-    if containers is not None:
-        containers['notification'][tool_index].info(message)
+        if type == "markdown":
+            containers['notification'][streaming_index].markdown(message)
+        elif type == "info":
+            containers['notification'][streaming_index].info(message)
 
 tool_info_list = dict()
 tool_input_list = dict()
@@ -673,7 +672,7 @@ async def run_strands_agent(query, strands_tools, mcp_servers, history_mode, con
                 text = event["data"]
                 logger.info(f"[data] {text}")
                 current += text
-                update_streaming_result(containers, current)
+                update_streaming_result(containers, current, "markdown")
 
             elif "result" in event:
                 final = event["result"]                
@@ -753,7 +752,7 @@ async def run_strands_agent(query, strands_tools, mcp_servers, history_mode, con
     return final_result, image_url
 
 async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
-    global index
+    global index, streaming_index
     index = 0
 
     image_url = []
@@ -837,7 +836,7 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
                                 result += text_content
                                 
                             # logger.info(f"result: {result}")                
-                            update_streaming_result(containers, result)
+                            update_streaming_result(containers, result, "markdown")
 
                         elif content_item.get('type') == 'tool_use':
                             logger.info(f"content_item: {content_item}")      
@@ -845,11 +844,9 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
                                 toolUseId = content_item.get('id', '')
                                 tool_name = content_item.get('name', '')
                                 logger.info(f"tool_name: {tool_name}, toolUseId: {toolUseId}")
-                                # add_notification(containers, f"Tool: {tool_name}, Input: {input}")
+                                streaming_index = index
+                                index += 1
 
-                                tool_info_list[toolUseId] = index                     
-                                tool_name_list[toolUseId] = tool_name     
-                                                                    
                             if 'partial_json' in content_item:
                                 partial_json = content_item.get('partial_json', '')
                                 logger.info(f"partial_json: {partial_json}")
@@ -861,9 +858,7 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
                                 logger.info(f"input: {input}")
 
                                 logger.info(f"tool_name: {tool_name}, input: {input}, toolUseId: {toolUseId}")
-                                # add_notification(containers, f"Tool: {tool_name}, Input: {input}")
-                                index = tool_info_list[toolUseId]
-                                containers['notification'][index-1].info(f"Tool: {tool_name}, Input: {input}")
+                                update_streaming_result(containers, f"Tool: {tool_name}, Input: {input}", "info")
                         
         elif isinstance(output, tuple) and len(output) > 0 and isinstance(output[0], ToolMessage):
             message = output[0]
