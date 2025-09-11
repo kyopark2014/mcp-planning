@@ -739,12 +739,12 @@ async def run_strands_agent(query, strands_tools, mcp_servers, history_mode, con
             else:
                 logger.info(f"event: {event}")
 
-        if references:
-            ref = "\n\n### Reference\n"
-            for i, reference in enumerate(references):
-                page_content = reference['content'][:100].replace("\n", "")
-                ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
-            final_result += ref
+        # if references:
+        #     ref = "\n\n### Reference\n"
+        #     for i, reference in enumerate(references):
+        #         page_content = reference['content'][:100].replace("\n", "")
+        #         ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
+        #     final_result += ref
 
         if containers is not None:
             containers['notification'][index].markdown(final_result)
@@ -887,12 +887,12 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
         result = "답변을 찾지 못하였습니다."        
     logger.info(f"result: {result}")
 
-    if references:
-        ref = "\n\n### Reference\n"
-        for i, reference in enumerate(references):
-            page_content = reference['content'][:100].replace("\n", "")
-            ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
-        result += ref
+    # if references:
+    #     ref = "\n\n### Reference\n"
+    #     for i, reference in enumerate(references):
+    #         page_content = reference['content'][:100].replace("\n", "")
+    #         ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
+    #     result += ref
     
     if containers is not None:
         containers['notification'][index].markdown(result)
