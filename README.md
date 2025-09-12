@@ -105,6 +105,67 @@ async def execute_agent(prompt: str, mcp_servers: list):
     return result, image_url
 ```
 
+### Strands SDK로 구현시
+
+아래와 같이 Strands SDK를 이용해 plan을 생성합니다. Step by step으로 게획을 작성하라고 요청하고, <plan> tag를 이용해 plan만을 추출하고 있습니다. 
+
+```python
+system_prompt=(
+    "For the given objective, come up with a simple step by step plan."
+    "This plan should involve individual tasks, that if executed correctly will yield the correct answer." 
+    "Do not add any superfluous steps."
+    "The result of the final step should be the final answer. Make sure that each step has all the information needed."
+    "The plan should be returned in <plan> tag."
+)
+
+planner = Agent(
+    name="plan", 
+    system_prompt=system_prompt
+)
+
+response = planner(question)
+result = str(response)
+plan = result[result.find('<plan>')+6:result.find('</plan>')]
+```
+
+이제 아래와 같이 주어진 plan에 따라 MCP를 이용해 정보를 수집하고 답변을 생성합니다.
+
+```python
+tool = "tavily-search"
+config = mcp_config.load_config(tool)
+mcp_servers = config["mcpServers"]
+mcp_client = None
+for server_name, server_config in mcp_servers.items():
+    env = server_config["env"] if "env" in server_config else None
+    mcp_client = MCPClient(lambda: stdio_client(
+        StdioServerParameters(
+            command=server_config["command"], 
+            args=server_config["args"], 
+            env=env
+        )
+    ))
+    break
+
+with mcp_client as client:
+    mcp_tools = client.list_tools_sync()    
+    tools = []
+    tools.extend(mcp_tools)
+
+    executor = Agent(
+        name="executor", 
+        tools=tools
+    )
+    prompt = question + "\n 다음의 계획을 참고하여 답변하세요.\n" + plan
+
+    agent_stream = executor.stream_async(prompt)
+
+    current = ""
+    async for event in agent_stream:
+        text = ""            
+        if "data" in event:
+            text = event["data"]
+            current += text
+```
 
 ## Graph를 이용한 Planning
 
