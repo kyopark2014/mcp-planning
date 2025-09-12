@@ -259,7 +259,16 @@ async for stream in app.astream(inputs, config, stream_mode="messages"):
 
 ## 실행 결과
 
-Plan을 활용하여 MCP agent에게 명확한 가이드를 제공하면, 아래와 같이 single agent보다 더 많은 출력과 향상된 결과를 얻을 수 있습니다.
+아래와 같이 "서울에서 제주 여행하는 방법은?"와 같은 질문을 하면, 이 질문을 해결하기 위한 plan을 아래와 같이 생성합니다. 이후 MCP agent는 plan을 수행하기 위한 검색을 수행하므로 sigle agent일 때보다 더 많은 많은 검색을 수행하게 됩니다. 
+
+<img width="726" height="779" alt="image" src="https://github.com/user-attachments/assets/1bafdfcb-69ef-47ac-8795-a917a065cd86" />
+
+Plan을 수행하기 위한 충분한 정보가 수집되면 아래와 같은 결과를 얻을 수 있습니다.
+
+<img width="717" height="790" alt="image" src="https://github.com/user-attachments/assets/30505964-93de-4ac6-97cf-213d2fd6ee5f" />
+
+
+이와 같이, planning을 활용하면, MCP agent에게 명확한 가이드를 제공할 수 있어서, 아래와 같이 single agent보다 더 많은 출력과 향상된 결과를 얻을 수 있습니다.
 
 ![ezgif-699b13ca6aa10d](https://github.com/user-attachments/assets/6facb328-e345-496e-a762-97a2f879a55b)
 
