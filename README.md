@@ -10,12 +10,12 @@ MCP agent는 필요한 정보를 multi step resoning을 통해 수집할 수 있
 
 ### LangGraph로 구현시
 
-Multi agent를 이용할 경우에 아래와 같이 plan_agent의 plan을 execute_agent에서 실행하는 방법을 활용할 수 있습니다.
+Multi agent를 이용할 경우에 아래와 같이 plan_agent의 plan을 execute_agent에서 실행하는 방법을 활용할 수 있습니다. Plan agent의 결과인 plan은 execute의 agent의 입력이 되어서 명확한 가이드를 제공합니다.
 
 ```python
 plan = await plan_agent(query)
-
-result, image_url = await execute_agent(query, plan, mcp_servers)
+prompt = query + "\n 다음의 계획을 참고하여 답변하세요.\n" + plan
+result, image_url = await execute_agent(prompt, mcp_servers)
 ```
 
 여기서 plan_agent는 아래와 같이 동작합니다. Agent의 결과에서 plan만을 추출하기 위하여 아래와 같이 <plan> tag를 prompt에 붙이도록 하고, 추출시 제거합니다.
@@ -71,7 +71,7 @@ def buildChatAgent(tools):
 Execute agent는 아래와 같이 plan에 따라 MCP를 조회하여 정보를 수집하고 결과를 stream으로 반환합니다.
 
 ```python
-async def execute_agent(query: str, plan: str, mcp_servers: list):
+async def execute_agent(prompt: str, mcp_servers: list):
     image_url = []
     references = []
     
@@ -81,19 +81,13 @@ async def execute_agent(query: str, plan: str, mcp_servers: list):
     tools = await client.get_tools()    
     app = langgraph_agent.buildChatAgent(tools)
 
-    system_prompt=(
-        "You are an executor who executes the plan."
-        "Make sure that each step has all the information needed."
-        f"<plan>{plan}</plan>"
-    )
     config = {
         "recursion_limit": 50,
         "configurable": {"thread_id": chat.user_id},
-        "tools": tools,
-        "system_prompt": system_prompt
+        "tools": tools
     }    
     inputs = {
-        "messages": [HumanMessage(content=query)]
+        "messages": [HumanMessage(content=prompt)]
     }
             
     result = ""    
