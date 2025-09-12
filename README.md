@@ -270,5 +270,6 @@ Plan을 수행하기 위한 충분한 정보가 수집되면 아래와 같은 �
 
 이와 같이, planning을 활용하면, MCP agent에게 명확한 가이드를 제공할 수 있어서, 아래와 같이 single agent보다 더 많은 출력과 향상된 결과를 얻을 수 있습니다.
 
-![ezgif-699b13ca6aa10d](https://github.com/user-attachments/assets/6facb328-e345-496e-a762-97a2f879a55b)
+<img width="700" alt="image" src="https://github.com/user-attachments/assets/6facb328-e345-496e-a762-97a2f879a55b" />
+
 
