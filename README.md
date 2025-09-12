@@ -1,9 +1,113 @@
 # MCP를 이용한 Planning의 구현
 
-## Agent를 이용한 Planning
+## Multi Agent를 이용한 Planning
 
 
 <img width="283" height="377" alt="image" src="https://github.com/user-attachments/assets/1e541e64-b959-407a-8791-0b4538f4a192" />
+
+### LangGraph
+
+Multi agent를 이용할 경우에 아래와 같이 plan_agent의 plan을 execute_agent에서 실행하는 방법을 활용할 수 있습니다.
+
+```python
+plan = await plan_agent(query)
+
+result, image_url = await execute_agent(query, plan, mcp_servers)
+```
+
+여기서 plan_agent는 아래와 같이 동작합니다. Agent의 결과에서 plan만을 추출하기 위하여 아래와 같이 <plan> tag를 prompt에 붙이도록 하고, 추출시 제거합니다.
+
+```python
+app = langgraph_agent.buildChatAgent(tools)
+
+system_prompt=(
+    "For the given objective, come up with a simple step by step plan."
+    "This plan should involve individual tasks, that if executed correctly will yield the correct answer." 
+    "Do not add any superfluous steps."
+    "The result of the final step should be the final answer. Make sure that each step has all the information needed."
+    "The plan should be returned in <plan> tag."
+)
+config = {
+    "recursion_limit": 50,
+    "tools": tools,
+    "system_prompt": system_prompt
+}
+inputs = {
+    "messages": [HumanMessage(content=query)]
+}
+
+response = await app.ainvoke(inputs, config)
+result = response['messages'][-1].content
+plan = result[result.find('<plan>')+6:result.find('</plan>')]
+```
+
+아래서 langgraph는 아래와 같이 구성합니다. 
+
+```python
+def buildChatAgent(tools):
+    tool_node = ToolNode(tools)
+
+    workflow = StateGraph(State)
+
+    workflow.add_node("agent", call_model)
+    workflow.add_node("action", tool_node)
+    workflow.add_edge(START, "agent")
+    workflow.add_conditional_edges(
+        "agent",
+        should_continue,
+        {
+            "continue": "action",
+            "end": END,
+        },
+    )
+    workflow.add_edge("action", "agent")
+
+    return workflow.compile() 
+```
+
+Execute agent는 아래와 같이 plan에 따라 MCP를 조회하여 정보를 수집하고 결과를 stream으로 반환합니다.
+
+```python
+async def execute_agent(query: str, plan: str, mcp_servers: list, containers: dict):
+    image_url = []
+    references = []
+    
+    mcp_json = mcp_config.load_selected_config(mcp_servers)
+    server_params = langgraph_agent.load_multiple_mcp_server_parameters(mcp_json)
+    client = MultiServerMCPClient(server_params)
+    tools = await client.get_tools()    
+    app = langgraph_agent.buildChatAgent(tools)
+
+    system_prompt=(
+        "You are an executor who executes the plan."
+        "주어진 질문에 답변하기 위하여 다음의 plan을 순차적으로 실행합니다."        
+        f"<plan>{plan}</plan>"
+        "tavily-search 도구를 사용하여 정보를 수집합니다."
+    )
+    config = {
+        "recursion_limit": 50,
+        "configurable": {"thread_id": chat.user_id},
+        "tools": tools,
+        "system_prompt": system_prompt
+    }    
+    inputs = {
+        "messages": [HumanMessage(content=query)]
+    }
+            
+    result = ""    
+    async for stream in app.astream(inputs, config, stream_mode="messages"):
+        if isinstance(stream[0], AIMessageChunk):
+            message = stream[0]    
+            input = {}        
+            if isinstance(message.content, list):
+                for content_item in message.content:
+                    if isinstance(content_item, dict):
+                        if content_item.get('type') == 'text':
+                            text_content = content_item.get('text', '')                            
+                            result += text_content
+                                
+    return result, image_url
+```
 
 ## Graph를 이용한 Planning
 
