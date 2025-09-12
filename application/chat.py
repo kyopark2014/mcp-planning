@@ -914,32 +914,19 @@ async def run_langgraph_agent_with_plan(query, mcp_servers, containers):
     server_params = langgraph_agent.load_multiple_mcp_server_parameters(mcp_json)
     logger.info(f"server_params: {server_params}")    
 
-    try:
-        client = MultiServerMCPClient(server_params)
-        logger.info(f"MCP client created successfully")
-        
-        tools = await client.get_tools()
-        logger.info(f"get_tools() returned: {tools}")
-        
-        if tools is None:
-            logger.error("tools is None - MCP client failed to get tools")
-            tools = []
-        
-        tool_list = [tool.name for tool in tools] if tools else []
-        logger.info(f"tool_list: {tool_list}")
-        
-    except Exception as e:
-        logger.error(f"Error creating MCP client or getting tools: {e}")
-        pass
-        
-    # If no tools available, use general conversation
-    if not tools:
-        logger.warning("No tools available, using general conversation mode")
-        result = "MCP 설정을 확인하세요."
-        if containers is not None:
-            containers['notification'][0].markdown(result)
-        return result, image_url
+    client = MultiServerMCPClient(server_params)
+    logger.info(f"MCP client created successfully")
     
+    tools = await client.get_tools()
+    logger.info(f"get_tools() returned: {tools}")
+    
+    if tools is None:
+        logger.error("tools is None - MCP client failed to get tools")
+        tools = []
+    
+    tool_list = [tool.name for tool in tools] if tools else []
+    logger.info(f"tool_list: {tool_list}")
+        
     app = langgraph_agent.buildChatAgentWithPlan(tools)
     config = {
         "recursion_limit": 50,
@@ -957,10 +944,7 @@ async def run_langgraph_agent_with_plan(query, mcp_servers, containers):
     tool_used = False  # Track if tool was used
     tool_name = toolUseId = ""
     async for output in app.astream(inputs, config, stream_mode="messages"):
-        # logger.info(f"output: {output}")
-
-        # Handle tuple output (message, metadata)
-        if isinstance(output, tuple) and len(output) > 0 and isinstance(output[0], AIMessageChunk):
+        if isinstance(output[0], AIMessageChunk):
             message = output[0]    
             input = {}        
             if isinstance(message.content, list):
@@ -968,16 +952,13 @@ async def run_langgraph_agent_with_plan(query, mcp_servers, containers):
                     if isinstance(content_item, dict):
                         if content_item.get('type') == 'text':
                             text_content = content_item.get('text', '')
-                            # logger.info(f"text_content: {text_content}")
-                            
-                            # If tool was used, start fresh result
+
                             if tool_used:
                                 result = text_content
                                 tool_used = False
                             else:
                                 result += text_content
                                 
-                            # logger.info(f"result: {result}")                
                             update_streaming_result(containers, result, "markdown")
 
                         elif content_item.get('type') == 'tool_use':
@@ -1002,7 +983,7 @@ async def run_langgraph_agent_with_plan(query, mcp_servers, containers):
                                 logger.info(f"tool_name: {tool_name}, input: {input}, toolUseId: {toolUseId}")
                                 update_streaming_result(containers, f"Tool: {tool_name}, Input: {input}", "info")
                         
-        elif isinstance(output, tuple) and len(output) > 0 and isinstance(output[0], ToolMessage):
+        elif isinstance(output[0], ToolMessage):
             message = output[0]
             logger.info(f"ToolMessage: {message.name}, {message.content}")
             tool_name = message.name

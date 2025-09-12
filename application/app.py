@@ -292,7 +292,6 @@ if prompt := st.chat_input("메시지를 입력하세요."):
         
         elif mode == "Agent with Plan":
             containers = {
-                "plan": st.empty(),
                 "tools": st.empty(),
                 "status": st.empty(),
                 "notification": [st.empty() for _ in range(500)]

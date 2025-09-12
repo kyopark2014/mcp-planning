@@ -56,10 +56,6 @@ def load_config():
 
 config = load_config()
 
-# api key to get weather information in agent
-
-    
-
 # api key to use Tavily Search
 tavily_key = ""
 def get_tavily_key():

@@ -174,7 +174,7 @@ async def plan_node(state: State, config):
         response = HumanMessage(content="다음의 plan을 참고하여 답변하세요.\n" + plan)
 
         if containers is not None:
-            containers['plan'].info('계획:\n' + plan)
+            chat.add_notification(containers, '계획:\n' + plan)
 
     except Exception:
         response = HumanMessage(content="")
