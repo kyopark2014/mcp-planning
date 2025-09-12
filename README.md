@@ -111,6 +111,11 @@ async def execute_agent(query: str, plan: str, mcp_servers: list):
     return result, image_url
 ```
 
+이때의 결과는 아래와 같습니다.
+
+![ezgif-699b13ca6aa10d](https://github.com/user-attachments/assets/6facb328-e345-496e-a762-97a2f879a55b)
+
+
 ## Graph를 이용한 Planning
 
 아래에서는 LangGraph에서 plan node를 추가한 agent를 활용함으로써 많은 출력과 향상된 결과를 얻는 방법에 대해 설명합니다. Agent는 기본적으로 agent node와 action node로 구성됩니다. 사용자의 입력으로 plan을 생성한 후에 agent와 action형태로 MCP를 활용함으로써 충분한 정보를 수집하여 답변할 수 있습니다.
