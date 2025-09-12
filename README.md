@@ -4,7 +4,7 @@ MCP agent는 필요한 정보를 multi step resoning을 통해 수집할 수 있
 
 ## Multi Agent를 이용한 Planning
 
-아래에서는 plann agent와 execute agent를 이용해 multi agent 패턴을 이용하고 있습니다. [Plan and Execute](https://github.com/kyopark2014/langgraph-agent?tab=readme-ov-file#plan-and-execute) 패턴은 cycle 형태로 plan을 업데이트하고 실행하는 방법을 이용해 결과를 향상시키지만 실행 시간의 대폭 증가하는 문제점이 있습니다. 여기에서는 multi-step reasoning을 통해 cycle 없이 plan을 실행함으로써 실행시간을 빠르게 하면서도 single agent 대비 많은 출력과 향상된 결과를 얻을 수 있습니다.
+아래에서는 plan agent와 execute agent를 이용해 multi agent 패턴을 구현하고 있습니다. [Plan and Execute](https://github.com/kyopark2014/langgraph-agent?tab=readme-ov-file#plan-and-execute) 패턴은 cycle 형태로 plan을 업데이트하고 실행하는 방법을 이용해 좋은 결과를 얻지만 cycle의 횟수만큼 실행 시간이 증가합니다. 여기에서는 multi-step reasoning을 통해 cycle 없이 plan을 실행함으로써 실행시간을 빠르게 하면서도 single agent 대비 많은 출력과 향상된 결과를 얻을 수 있습니다.
 
 <img width="283" height="377" alt="image" src="https://github.com/user-attachments/assets/1e541e64-b959-407a-8791-0b4538f4a192" />
 
