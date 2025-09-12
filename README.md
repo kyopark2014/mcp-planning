@@ -1,6 +1,6 @@
-# MCP를 이용한 Planning의 구현
+# MCP를 이용한 Planning Agent의 구현
 
-MCP agent는 필요한 정보를 multi step resoning을 통해 수집할 수 있어서 일반적으로 좋은 결과를 얻습니다. 하지만 목적에 따라서 더 많은 결과를 얻기를 원한다면 planning을 이용해 agent의 성능을 향상시킬 수 있습니다. 아래에서는 planning을 구현하기 위하여 multi agent를 이용하는 방법과 graph를 이용하는 방법을 설명합니다. 이를 통해 좀더 풍부하고 의미있는 agentic AI 애플리케이션을 만들 수 있습니다.
+MCP agent는 필요한 정보를 multi step reasoning을 통해 수집할 수 있어서 일반적으로 좋은 결과를 얻습니다. 하지만 목적에 따라서 더 많은 결과를 얻기를 원한다면 planning을 이용해 agent의 성능을 향상시킬 수 있습니다. 아래에서는 planning을 구현하기 위하여 multi agent를 이용하는 방법과 graph를 이용하는 방법을 설명합니다. 이를 통해 좀더 풍부하고 의미있는 agentic AI 애플리케이션을 만들 수 있습니다.
 
 ## Multi Agent를 이용한 Planning
 
