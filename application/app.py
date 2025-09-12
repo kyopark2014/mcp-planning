@@ -280,14 +280,8 @@ if prompt := st.chat_input("메시지를 입력하세요."):
                     mcp_servers=mcp_servers,
                     containers=containers))
             else:
-                # response, image_url = asyncio.run(chat.run_strands_planning_agent(
-                # query=prompt, 
-                # mcp_servers=mcp_servers,
-                # containers=containers))
-
                 response = asyncio.run(strands_planning.planning_agent(
                     question=prompt, 
-                    #mcp_servers=mcp_servers, 
                     containers=containers))
         
         elif mode == "Agent with Plan":
@@ -305,8 +299,6 @@ if prompt := st.chat_input("메시지를 입력하세요."):
             else:
                 response, image_url = asyncio.run(strands_planning.run_strands_agent_with_plan(
                     query=prompt, 
-                    #strands_tools=[], 
-                    #mcp_servers=mcp_servers, 
                     containers=containers))
             
         st.session_state.messages.append({

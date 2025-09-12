@@ -764,32 +764,19 @@ async def run_langgraph_agent(query, mcp_servers, history_mode, containers):
     server_params = langgraph_agent.load_multiple_mcp_server_parameters(mcp_json)
     logger.info(f"server_params: {server_params}")    
 
-    try:
-        client = MultiServerMCPClient(server_params)
-        logger.info(f"MCP client created successfully")
-        
-        tools = await client.get_tools()
-        logger.info(f"get_tools() returned: {tools}")
-        
-        if tools is None:
-            logger.error("tools is None - MCP client failed to get tools")
-            tools = []
-        
-        tool_list = [tool.name for tool in tools] if tools else []
-        logger.info(f"tool_list: {tool_list}")
-        
-    except Exception as e:
-        logger.error(f"Error creating MCP client or getting tools: {e}")
-        pass
-        
-    # If no tools available, use general conversation
-    if not tools:
-        logger.warning("No tools available, using general conversation mode")
-        result = "MCP 설정을 확인하세요."
-        if containers is not None:
-            containers['notification'][0].markdown(result)
-        return result, image_url
+    client = MultiServerMCPClient(server_params)
+    logger.info(f"MCP client created successfully")
     
+    tools = await client.get_tools()
+    logger.info(f"get_tools() returned: {tools}")
+    
+    if tools is None:
+        logger.error("tools is None - MCP client failed to get tools")
+        tools = []
+    
+    tool_list = [tool.name for tool in tools] if tools else []
+    logger.info(f"tool_list: {tool_list}")
+        
     if history_mode == "Enable":
         app = langgraph_agent.buildChatAgentWithHistory(tools)
         config = {

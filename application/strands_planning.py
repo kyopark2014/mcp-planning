@@ -127,14 +127,17 @@ async def planning_agent(question, containers):
     chat.add_notification(containers, f"계획을 생성하는 중입니다...")
 
     # Create specialized agents
+    system_prompt=(
+        "For the given objective, come up with a simple step by step plan."
+        "This plan should involve individual tasks, that if executed correctly will yield the correct answer." 
+        "Do not add any superfluous steps."
+        "The result of the final step should be the final answer. Make sure that each step has all the information needed."
+        "The plan should be returned in <plan> tag."
+    )
+
     planner = Agent(
         name="plan", 
-        system_prompt=(
-            "For the given objective, come up with a simple step by step plan."
-            "This plan should involve individual tasks, that if executed correctly will yield the correct answer. Do not add any superfluous steps."
-            "The result of the final step should be the final answer. Make sure that each step has all the information needed - do not skip steps."
-            "생성된 계획은 <plan> 태그로 감싸서 반환합니다."
-        )
+        system_prompt=system_prompt
     )
 
     #agent_stream = await planner.stream_async(question)
@@ -182,17 +185,13 @@ async def planning_agent(question, containers):
         
         executor = Agent(
             name="executor", 
-            system_prompt=(
-                "You are an executor who executes the plan."
-                "주어진 질문에 답변하기 위하여 다음의 plan을 순차적으로 실행합니다."
-                "tavily-search 도구를 사용하여 정보를 수집합니다."
-                f"<plan>{plan}</plan>"
-            ),
             tools=tools
         )
 
-        # result = executor(question)
-        agent_stream = executor.stream_async(question)
+        prompt = question + "\n 다음의 계획을 참고하여 답변하세요.\n" + plan
+        logger.info(f"prompt: {prompt}")
+
+        agent_stream = executor.stream_async(prompt)
         
         current = ""
         async for event in agent_stream:

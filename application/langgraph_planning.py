@@ -185,7 +185,6 @@ async def planning_agent(query: str, mcp_servers: list, containers: dict):
     logger.info(f"plan: {plan}")
     chat.add_notification(containers, f"생성된 계획:\n{plan}")
 
-
     prompt = query + "\n 다음의 계획을 참고하여 답변하세요.\n" + plan
     logger.info(f"prompt: {prompt}")
 
