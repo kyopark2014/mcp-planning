@@ -71,7 +71,7 @@ def buildChatAgent(tools):
 Execute agent는 아래와 같이 plan에 따라 MCP를 조회하여 정보를 수집하고 결과를 stream으로 반환합니다.
 
 ```python
-async def execute_agent(query: str, plan: str, mcp_servers: list, containers: dict):
+async def execute_agent(query: str, plan: str, mcp_servers: list):
     image_url = []
     references = []
     
@@ -83,9 +83,8 @@ async def execute_agent(query: str, plan: str, mcp_servers: list, containers: di
 
     system_prompt=(
         "You are an executor who executes the plan."
-        "주어진 질문에 답변하기 위하여 다음의 plan을 순차적으로 실행합니다."        
+        "Make sure that each step has all the information needed."
         f"<plan>{plan}</plan>"
-        "tavily-search 도구를 사용하여 정보를 수집합니다."
     )
     config = {
         "recursion_limit": 50,
