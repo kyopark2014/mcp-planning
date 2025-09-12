@@ -7,4 +7,4 @@
 
 ## Graph를 이용한 Planning
 
-<img width="600" alt="image" src="https://github.com/user-attachments/assets/d5a2b2d8-9946-47c2-add7-9fd0411c4274" />
+<img width="700" alt="image" src="https://github.com/user-attachments/assets/d5a2b2d8-9946-47c2-add7-9fd0411c4274" />
