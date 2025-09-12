@@ -198,7 +198,7 @@ async for stream in app.astream(inputs, config, stream_mode="messages"):
 
 ## 실행 결과
 
-Plan을 활용하여 MCP agent에게 명확한 가이드를 제공하면, 아래와 같이 single agent보다 더 많은 출력을 제공합니다.
+Plan을 활용하여 MCP agent에게 명확한 가이드를 제공하면, 아래와 같이 single agent보다 더 많은 출력과 향상된 결과를 얻을 수 있습니다.
 
 ![ezgif-699b13ca6aa10d](https://github.com/user-attachments/assets/6facb328-e345-496e-a762-97a2f879a55b)
 
