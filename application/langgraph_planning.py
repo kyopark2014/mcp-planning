@@ -62,7 +62,7 @@ async def plan_agent(query: str, containers: dict):
 
     return plan
 
-async def execute_agent(query: str, plan: str, mcp_servers: list, containers: dict):
+async def execute_agent(prompt: str, mcp_servers: list, containers: dict):
     image_url = []
     references = []
     
@@ -86,22 +86,14 @@ async def execute_agent(query: str, plan: str, mcp_servers: list, containers: di
     logger.info(f"tool_list: {tool_list}")
         
     app = langgraph_agent.buildChatAgent(tools)
-
-    system_prompt=(
-        "You are an executor who executes the plan."
-        "Make sure that each step has all the information needed."
-        f"<plan>{plan}</plan>"
-    )
-
     config = {
         "recursion_limit": 50,
         "configurable": {"thread_id": chat.user_id},
-        "tools": tools,
-        "system_prompt": system_prompt
+        "tools": tools
     }
     
     inputs = {
-        "messages": [HumanMessage(content=query)]
+        "messages": [HumanMessage(content=prompt)]
     }
             
     result = ""
@@ -193,8 +185,12 @@ async def planning_agent(query: str, mcp_servers: list, containers: dict):
     logger.info(f"plan: {plan}")
     chat.add_notification(containers, f"생성된 계획:\n{plan}")
 
+
+    prompt = query + "\n 다음의 계획을 참고하여 답변하세요.\n" + plan
+    logger.info(f"prompt: {prompt}")
+
     logger.info(f"=== Use Execute Agent ===")
-    result, image_url = await execute_agent(query, plan, mcp_servers, containers)
+    result, image_url = await execute_agent(prompt, mcp_servers, containers)
 
     logger.info(f"result: {result}")
     logger.info(f"image_url: {image_url}")
