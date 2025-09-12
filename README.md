@@ -105,10 +105,6 @@ async def execute_agent(prompt: str, mcp_servers: list):
     return result, image_url
 ```
 
-이때의 결과는 아래와 같습니다. Muli agent로 구현한 planning agent는 plan에 기반하여 충분한 정보를 수집한 후에 아래와 같이 single agent보다 더 많은 출력을 제공합니다.
-
-![ezgif-699b13ca6aa10d](https://github.com/user-attachments/assets/6facb328-e345-496e-a762-97a2f879a55b)
-
 
 ## Graph를 이용한 Planning
 
@@ -199,3 +195,10 @@ async for stream in app.astream(inputs, config, stream_mode="messages"):
                         text_content = content_item.get('text', '')
                         result += text_content                            
 ```
+
+## 실행 결과
+
+Plan을 활용하여 MCP agent에게 명확한 가이드를 제공하면, 아래와 같이 single agent보다 더 많은 출력을 제공합니다.
+
+![ezgif-699b13ca6aa10d](https://github.com/user-attachments/assets/6facb328-e345-496e-a762-97a2f879a55b)
+
