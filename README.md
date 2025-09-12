@@ -8,7 +8,7 @@ MCP agent는 필요한 정보를 multi step resoning을 통해 수집할 수 있
 
 <img width="283" height="377" alt="image" src="https://github.com/user-attachments/assets/1e541e64-b959-407a-8791-0b4538f4a192" />
 
-### LangGraph
+### LangGraph로 구현시
 
 Multi agent를 이용할 경우에 아래와 같이 plan_agent의 plan을 execute_agent에서 실행하는 방법을 활용할 수 있습니다.
 
