@@ -920,10 +920,6 @@ async def run_langgraph_agent_with_plan(query, mcp_servers, containers):
     tools = await client.get_tools()
     logger.info(f"get_tools() returned: {tools}")
     
-    if tools is None:
-        logger.error("tools is None - MCP client failed to get tools")
-        tools = []
-    
     tool_list = [tool.name for tool in tools] if tools else []
     logger.info(f"tool_list: {tool_list}")
         
@@ -943,9 +939,9 @@ async def run_langgraph_agent_with_plan(query, mcp_servers, containers):
     result = ""
     tool_used = False  # Track if tool was used
     tool_name = toolUseId = ""
-    async for output in app.astream(inputs, config, stream_mode="messages"):
-        if isinstance(output[0], AIMessageChunk):
-            message = output[0]    
+    async for stream in app.astream(inputs, config, stream_mode="messages"):
+        if isinstance(stream[0], AIMessageChunk):
+            message = stream[0]    
             input = {}        
             if isinstance(message.content, list):
                 for content_item in message.content:
@@ -983,8 +979,8 @@ async def run_langgraph_agent_with_plan(query, mcp_servers, containers):
                                 logger.info(f"tool_name: {tool_name}, input: {input}, toolUseId: {toolUseId}")
                                 update_streaming_result(containers, f"Tool: {tool_name}, Input: {input}", "info")
                         
-        elif isinstance(output[0], ToolMessage):
-            message = output[0]
+        elif isinstance(stream[0], ToolMessage):
+            message = stream[0]
             logger.info(f"ToolMessage: {message.name}, {message.content}")
             tool_name = message.name
             toolResult = message.content

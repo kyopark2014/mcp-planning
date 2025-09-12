@@ -24,7 +24,7 @@ async def plan_agent(query: str, containers: dict):
         "For the given objective, come up with a simple step by step plan."
         "This plan should involve individual tasks, that if executed correctly will yield the correct answer." 
         "Do not add any superfluous steps."
-        "The result of the final step should be the final answer. Make sure that each step has all the information needed - do not skip steps."
+        "The result of the final step should be the final answer. Make sure that each step has all the information needed."
         "The plan should be returned in <plan> tag."
     )
 
@@ -72,39 +72,25 @@ async def execute_agent(query: str, plan: str, mcp_servers: list, containers: di
     server_params = langgraph_agent.load_multiple_mcp_server_parameters(mcp_json)
     logger.info(f"server_params: {server_params}")    
 
-    try:
-        client = MultiServerMCPClient(server_params)
-        logger.info(f"MCP client created successfully")
-        
-        tools = await client.get_tools()
-        logger.info(f"get_tools() returned: {tools}")
-        
-        if tools is None:
-            logger.error("tools is None - MCP client failed to get tools")
-            tools = []
-        
-        tool_list = [tool.name for tool in tools] if tools else []
-        logger.info(f"tool_list: {tool_list}")
-        
-    except Exception as e:
-        logger.error(f"Error creating MCP client or getting tools: {e}")
-        pass
-        
-    # If no tools available, use general conversation
-    if not tools:
-        logger.warning("No tools available, using general conversation mode")
-        result = "MCP 설정을 확인하세요."
-        if containers is not None:
-            containers['notification'][0].markdown(result)
-        return result, image_url
+    client = MultiServerMCPClient(server_params)
+    logger.info(f"MCP client created successfully")
     
+    tools = await client.get_tools()
+    logger.info(f"get_tools() returned: {tools}")
+    
+    if tools is None:
+        logger.error("tools is None - MCP client failed to get tools")
+        tools = []
+    
+    tool_list = [tool.name for tool in tools] if tools else []
+    logger.info(f"tool_list: {tool_list}")
+        
     app = langgraph_agent.buildChatAgent(tools)
 
     system_prompt=(
         "You are an executor who executes the plan."
-        "주어진 질문에 답변하기 위하여 다음의 plan을 순차적으로 실행합니다."        
+        "Make sure that each step has all the information needed."
         f"<plan>{plan}</plan>"
-        "tavily-search 도구를 사용하여 정보를 수집합니다."
     )
 
     config = {
@@ -200,10 +186,9 @@ async def execute_agent(query: str, plan: str, mcp_servers: list, containers: di
 async def planning_agent(query: str, mcp_servers: list, containers: dict):    
     chat.index = 0
 
-    chat.add_notification(containers, f"계획을 생성하는 중입니다...")
-    plan = await plan_agent(query, containers)
-
+    chat.add_notification(containers, f"계획을 생성하는 중입니다...")    
     logger.info(f"=== Use Plan Agent ===")    
+    plan = await plan_agent(query, containers)
     
     logger.info(f"plan: {plan}")
     chat.add_notification(containers, f"생성된 계획:\n{plan}")
