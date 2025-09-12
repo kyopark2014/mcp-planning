@@ -41,7 +41,7 @@ result = response['messages'][-1].content
 plan = result[result.find('<plan>')+6:result.find('</plan>')]
 ```
 
-아래서 langgraph는 아래와 같이 구성합니다. 
+Langgraph는 아래와 같이 구성합니다. 
 
 ```python
 def buildChatAgent(tools):
