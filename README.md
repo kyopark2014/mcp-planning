@@ -111,7 +111,7 @@ async def execute_agent(query: str, plan: str, mcp_servers: list):
     return result, image_url
 ```
 
-이때의 결과는 아래와 같습니다.
+이때의 결과는 아래와 같습니다. Muli agent로 구현한 planning agent는 plan에 기반하여 충분한 정보를 수집한 후에 아래와 같이 single agent보다 더 많은 출력을 제공합니다.
 
 ![ezgif-699b13ca6aa10d](https://github.com/user-attachments/assets/6facb328-e345-496e-a762-97a2f879a55b)
 
