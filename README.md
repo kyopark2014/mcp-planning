@@ -113,4 +113,90 @@ async def execute_agent(query: str, plan: str, mcp_servers: list):
 
 ## Graph를 이용한 Planning
 
+아래에서는 LangGraph에서 plan node를 추가한 agent를 활용함으로써 많은 출력과 향상된 결과를 얻는 방법에 대해 설명합니다. Agent는 기본적으로 agent node와 action node로 구성됩니다. 사용자의 입력으로 plan을 생성한 후에 agent와 action형태로 MCP를 활용함으로써 충분한 정보를 수집하여 답변할 수 있습니다.
+
 <img width="700" alt="image" src="https://github.com/user-attachments/assets/d5a2b2d8-9946-47c2-add7-9fd0411c4274" />
+
+Agent에 plan node를 아래와 같이 추가합니다.
+
+```python
+def buildChatAgentWithPlan(tools):
+    tool_node = ToolNode(tools)
+
+    workflow = StateGraph(State)
+
+    workflow.add_node("plan", plan_node)
+    workflow.add_node("agent", call_model)
+    workflow.add_node("action", tool_node)
+    workflow.add_edge(START, "plan")
+    workflow.add_edge("plan", "agent")
+    workflow.add_conditional_edges(
+        "agent",
+        should_continue,
+        {
+            "continue": "action",
+            "end": END,
+        },
+    )
+    workflow.add_edge("action", "agent")
+
+    return workflow.compile() 
+```
+
+Plan node는 prompt를 이용해 계획을 세우고, 결과는 아래와 같이 HumanMessage로 반환함으로써, agent가 사용자의 지시사항으로 인지하게 합니다.
+
+```python
+async def plan_node(state: State, config):
+    system=(
+        "For the given objective, come up with a simple step by step plan."
+        "This plan should involve individual tasks, that if executed correctly will yield the correct answer." 
+        "Do not add any superfluous steps."
+        "The result of the final step should be the final answer. Make sure that each step has all the information needed"
+        "The plan should be returned in <plan> tag."
+    )
+    chatModel = chat.get_chat(extended_thinking="Disable")    
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system),
+            MessagesPlaceholder(variable_name="messages"),
+        ]
+    )
+    chain = prompt | chatModel
+        
+    result = await chain.ainvoke(state["messages"])
+    plan = result.content[result.content.find('<plan>')+6:result.content.find('</plan>')]
+    plan = plan.strip()
+    response = HumanMessage(content="다음의 plan을 참고하여 답변하세요.\n" + plan)
+
+    return {"messages": [response]}
+```
+
+이후 아래와 같이 MCP tool에 대한 정보를 이용해 필요한 정보를 수집해 답변을 생성합니다.
+
+```python
+mcp_json = mcp_config.load_selected_config(mcp_servers)
+server_params = langgraph_agent.load_multiple_mcp_server_parameters(mcp_json)
+client = MultiServerMCPClient(server_params)
+tools = await client.get_tools()
+    
+app = langgraph_agent.buildChatAgentWithPlan(tools)
+config = {
+    "recursion_limit": 50,
+    "tools": tools,
+}        
+inputs = {
+    "messages": [HumanMessage(content=query)]
+}
+        
+result = ""
+async for stream in app.astream(inputs, config, stream_mode="messages"):
+    if isinstance(stream[0], AIMessageChunk):
+        message = stream[0]    
+        input = {}        
+        if isinstance(message.content, list):
+            for content_item in message.content:
+                if isinstance(content_item, dict):
+                    if content_item.get('type') == 'text':
+                        text_content = content_item.get('text', '')
+                        result += text_content                            
+```
