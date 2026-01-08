@@ -354,15 +354,13 @@ def get_chat(extended_thinking):
             "max_tokens":maxOutputTokens,     
             "temperature":0.1,
             "top_k":250,
-            "top_p":0.9,
             "stop_sequences": [STOP_SEQUENCE]
         }
     elif profile['model_type'] == 'openai':
         parameters = {
             "max_tokens":maxOutputTokens,     
             "temperature":0.1,
-            "top_k":250,
-            "top_p":0.9,
+            "top_k":250
         }
 
     chat = ChatBedrock(   # new chat model
@@ -471,15 +469,13 @@ def get_parallel_processing_chat(models, selected):
             "max_tokens":maxOutputTokens,     
             "temperature":0.1,
             "top_k":250,
-            "top_p":0.9,
             "stop_sequences": [STOP_SEQUENCE]
         }
     else:
         parameters = {
             "max_tokens":maxOutputTokens,     
             "temperature":0.1,
-            "top_k":250,
-            "top_p":0.9,
+            "top_k":250
         }
 
     chat = ChatBedrock(   # new chat model
