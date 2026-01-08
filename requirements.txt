@@ -1,0 +1,14 @@
+streamlit
+streamlit-chat
+boto3
+langchain_aws
+langchain
+langchain_community
+langgraph
+langchain_experimental
+mcp
+langchain-mcp-adapters
+requests
+uv
+graphviz
+rich
