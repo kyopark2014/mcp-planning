@@ -622,7 +622,21 @@ def get_tool_info(tool_name, tool_content):
                     for url in path:
                         urls.append(url)
                 else:
-                    urls.append(path)            
+                    urls.append(path)
+            elif isinstance(json_data, list):  # Parse JSON from text field when json_data is a list
+                for item in json_data:
+                    if isinstance(item, dict) and "text" in item:
+                        try:
+                            text_json = json.loads(item["text"])
+                            if isinstance(text_json, dict) and "path" in text_json:
+                                path = text_json["path"]
+                                if isinstance(path, list):
+                                    for url in path:
+                                        urls.append(url)
+                                else:
+                                    urls.append(path)
+                        except (json.JSONDecodeError, TypeError):
+                            pass            
 
             if isinstance(json_data, dict):
                 for item in json_data:
