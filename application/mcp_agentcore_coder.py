@@ -277,7 +277,7 @@ print(image_base64)
         with open(file_path, 'wb') as f:
             f.write(byteImage.getvalue())
 
-        image_url = file_path
+        image_url = upload_to_s3(byteImage.getvalue(), image_name)
         logger.info(f"image_url: {image_url}")
 
     return {
