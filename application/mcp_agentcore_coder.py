@@ -262,13 +262,30 @@ print(image_base64)
             if 'content' in result:
                 for content_item in result['content']:
                     if content_item['type'] == 'text':
-                        result_text = content_item['text']
-                        logger.info(f"result: {result_text}")
+                        result_text += content_item['text']
+                        logger.info(f"result chunk: {content_item['text']}")
     
-    base64Img = result_text
-            
+    logger.info(f"full result_text length: {len(result_text)}")
+    
+    # Clean and fix base64 string
+    base64Img = result_text.strip()
+    # Remove any whitespace and newlines
+    base64Img = ''.join(base64Img.split())
+    
+    image_url = None
+    
     if base64Img:
-        byteImage = BytesIO(base64.b64decode(base64Img))
+        # Fix padding if needed
+        missing_padding = len(base64Img) % 4
+        if missing_padding:
+            base64Img += '=' * (4 - missing_padding)
+        
+        try:
+            byteImage = BytesIO(base64.b64decode(base64Img))
+        except Exception as e:
+            logger.error(f"Error decoding base64: {e}")
+            logger.error(f"base64Img length: {len(base64Img)}, first 100 chars: {base64Img[:100]}")
+            raise
 
         image_name = generate_short_uuid()+'.png'
 
@@ -279,6 +296,9 @@ print(image_base64)
 
         image_url = upload_to_s3(byteImage.getvalue(), image_name)
         logger.info(f"image_url: {image_url}")
+    else:
+        logger.error("No base64 image data received")
+        raise ValueError("No base64 image data received from code interpreter")
 
     return {
         "path": image_url
