@@ -19,19 +19,40 @@ logging.basicConfig(
 )
 logger = logging.getLogger("agentcore-coder")
 
-aws_region = os.environ.get('AWS_DEFAULT_REGION', 'us-west-2')
+script_dir = os.path.dirname(os.path.abspath(__file__))
+config_path = os.path.join(script_dir, "config.json")
+    
+def load_config():
+    config = None
+        
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+    
+    return config
+
+config = load_config()
+
+region = config.get('region', 'us-west-2')
+projectName = config.get('projectName')
+
+s3_prefix = 'docs'
+s3_image_prefix = 'images'
+model_name = "Claude 4.5 Haiku"
+s3_bucket = config.get('s3_bucket')
+path = config.get('sharing_url')
+code_interpreter_id = config.get('code_interpreter_id', 'aws.codeinterpreter.v1')
 
 client = boto3.client(
     "bedrock-agentcore", 
-    region_name=aws_region,
-    endpoint_url=f"https://bedrock-agentcore.{aws_region}.amazonaws.com"
+    region_name=region,
+    endpoint_url=f"https://bedrock-agentcore.{region}.amazonaws.com"
 )
 
 sessionId = None
 def create_code_interpreter_sessionId():
     session_id = None
     response = client.list_code_interpreter_sessions(
-        codeInterpreterIdentifier='aws.codeinterpreter.v1',
+        codeInterpreterIdentifier=code_interpreter_id,
         maxResults=5,
         status='READY'
     )
@@ -45,7 +66,7 @@ def create_code_interpreter_sessionId():
     if session_id is None:  # still no sessionId
         logger.info("No ready sessions found")
         response = client.start_code_interpreter_session(
-            codeInterpreterIdentifier='aws.codeinterpreter.v1',
+            codeInterpreterIdentifier=code_interpreter_id,
             name="agentcore-code-session",
             sessionTimeoutSeconds=900
         )
@@ -63,7 +84,7 @@ def get_code_interpreter_sessionId():
         logger.info(f"sessionId: {sessionId}")
         try:
             response = client.get_code_interpreter_session(
-                codeInterpreterIdentifier='aws.codeinterpreter.v1',
+                codeInterpreterIdentifier=code_interpreter_id,
                 sessionId=sessionId
             )
             logger.info(f"response of get_code_interpreter_session: {response}")        
@@ -91,7 +112,7 @@ def agentcore_coder(code):
     sessionId = get_code_interpreter_sessionId()
     
     execute_response = client.invoke_code_interpreter(
-        codeInterpreterIdentifier="aws.codeinterpreter.v1",
+        codeInterpreterIdentifier=code_interpreter_id,
         sessionId=sessionId,
         name="executeCode",
         arguments={
@@ -114,7 +135,7 @@ def agentcore_coder(code):
 
     # stop the session
     # client.stop_code_interpreter_session(
-    #     codeInterpreterIdentifier="aws.codeinterpreter.v1",
+    #     codeInterpreterIdentifier=code_interpreter_id,
     #     sessionId=sessionId
     # )
     return result_text
@@ -146,27 +167,6 @@ def get_contents_type(file_name):
         content_type = "no info"    
     return content_type
 
-
-def load_config():
-    config = None
-    
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(script_dir, "config.json")
-    
-    with open(config_path, "r", encoding="utf-8") as f:
-        config = json.load(f)
-    
-    return config
-
-config = load_config()
-
-bedrock_region = config['region']
-projectName = config['projectName']
-
-s3_prefix = 'docs'
-s3_image_prefix = 'images'
-model_name = "Claude 3.5 Sonnet"
-
 def upload_to_s3(file_bytes, file_name):
     """
     Upload a file to S3 and return the URL
@@ -174,7 +174,7 @@ def upload_to_s3(file_bytes, file_name):
     try:
         s3_client = boto3.client(
             service_name='s3',
-            region_name=bedrock_region,
+            region_name=region,
         )
 
         content_type = get_contents_type(file_name)       
@@ -244,7 +244,7 @@ print(image_base64)
     sessionId = get_code_interpreter_sessionId()
     
     execute_response = client.invoke_code_interpreter(
-        codeInterpreterIdentifier="aws.codeinterpreter.v1",
+        codeInterpreterIdentifier=code_interpreter_id,
         sessionId=sessionId,
         name="executeCode",
         arguments={

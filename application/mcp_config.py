@@ -21,7 +21,7 @@ config = utils.load_config()
 logger.info(f"config: {config}")
 
 region = config.get("region", "us-west-2")
-projectName = config.get("projectName", "mcp")
+projectName = config.get("projectName")
 
 workingDir = os.path.dirname(os.path.abspath(__file__))
 logger.info(f"workingDir: {workingDir}")

@@ -39,6 +39,7 @@ elbv2_client = boto3.client("elbv2", region_name=region)
 cloudfront_client = boto3.client("cloudfront", region_name=region)
 lambda_client = boto3.client("lambda", region_name=region)
 ssm_client = boto3.client("ssm", region_name=region)
+bedrock_agentcore_client = boto3.client("bedrock-agentcore-control", region_name=region)
 
 bucket_name = f"storage-for-{project_name}-{account_id}-{region}"
 
@@ -3687,7 +3688,105 @@ def check_application_ready(domain: str, max_attempts: int = 120, wait_seconds: 
             logger.warning(f"  Total attempts: {max_attempts}/{max_attempts} (100%)")
             logger.warning("The application may still be deploying. Please check manually.")
 
+def create_code_interpreter_role() -> str:
+    """Create Code Interpreter Execution IAM role."""
+    logger.info("Creating Code Interpreter Execution IAM role")
+    role_name = f"role-code-interpreter-for-{project_name}-{region}"
+    
+    assume_role_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {
+                    "Service": "bedrock-agentcore.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole",
+                "Condition": {
+                    "StringEquals": {
+                        "aws:SourceAccount": account_id
+                    }
+                }
+            }
+        ]
+    }
+    
+    role_arn = create_iam_role(role_name, assume_role_policy)
+    
+    # Wait for IAM role to propagate
+    logger.info("  Waiting for IAM role to propagate...")
+    time.sleep(10)
+    
+    s3_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:DeleteObject",
+                    "s3:ListBucket"
+                ],
+                "Resource": [
+                    f"arn:aws:s3:::{bucket_name}",
+                    f"arn:aws:s3:::{bucket_name}/*"
+                ]
+            }
+        ]
+    }
+    attach_inline_policy(role_name, f"code-interpreter-s3-policy-for-{project_name}", s3_policy)
+    
+    # Wait for policy to propagate
+    logger.info("  Waiting for IAM policy to propagate...")
+    time.sleep(5)
+        
+    return role_arn
 
+
+def create_code_interpreter():
+    """Create a code interpreter."""
+    logger.info(f"Creating code interpreter: {project_name}")
+
+    code_interpreter_role_arn = create_code_interpreter_role()
+    logger.info(f"Code interpreter role ARN: {code_interpreter_role_arn}")
+    
+    try:
+        response = bedrock_agentcore_client.create_code_interpreter(
+            name=project_name,
+            networkConfiguration={
+                'networkMode': 'PUBLIC'
+            },
+            description=f"Code interpreter for {project_name}",
+            executionRoleArn=code_interpreter_role_arn
+        )
+        
+        code_interpreter_id = response.get('codeInterpreterId')
+        logger.info(f"✓ Code interpreter created successfully: {code_interpreter_id}")
+        return code_interpreter_id
+    
+    except ClientError as e:
+        error_code = e.response.get("Error", {}).get("Code", "")
+        if error_code == "ConflictException":
+            logger.warning(f"Code interpreter already exists: {project_name}")
+            # Try to get existing code interpreter
+            try:
+                # Note: This assumes there's a list_code_interpreters API
+                # If not available, you may need to use describe_code_interpreter
+                response = bedrock_agentcore_client.describe_code_interpreter(
+                    codeInterpreterId=project_name
+                )
+                code_interpreter_id = response.get('codeInterpreterId')
+                logger.info(f"✓ Using existing code interpreter: {code_interpreter_id}")
+                return code_interpreter_id
+            except ClientError:
+                logger.error(f"Failed to get existing code interpreter: {e}")
+                raise
+        logger.error(f"Failed to create code interpreter: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error creating code interpreter: {e}")
+        raise
 
 def main():
     """Main function to create all infrastructure."""
@@ -3776,6 +3875,10 @@ def main():
         alb_listener_info = create_alb_target_group_and_listener(alb_info, instance_id, vpc_info)
         logger.info(f"ALB target group and listener created...")
         
+        # 10. Create code interpreter
+        code_interpreter_id = create_code_interpreter()
+        logger.info(f"Code interpreter created...")
+        
         # check whether the applireation is ready
         logger.info(f"Checking if application is ready: {cloudfront_info['domain']}")
         check_application_ready(cloudfront_info["domain"])        
@@ -3797,6 +3900,7 @@ def main():
         logger.info(f"  OpenSearch Endpoint: {opensearch_info['endpoint']}")
         logger.info(f"  Knowledge Base ID: {knowledge_base_id}")
         logger.info(f"  Knowledge Base Role: {knowledge_base_role_arn}")
+        logger.info(f"  Code Interpreter ID: {code_interpreter_id}")
         logger.info("")
         logger.info(f"Total deployment time: {elapsed_time/60:.2f} minutes")
         logger.info("="*60)
@@ -3828,7 +3932,8 @@ def main():
             "opensearch_url": opensearch_info["endpoint"],
             "s3_bucket": s3_bucket_name,
             "s3_arn": f"arn:aws:s3:::{s3_bucket_name}",
-            "sharing_url": f"https://{cloudfront_info['domain']}"
+            "sharing_url": f"https://{cloudfront_info['domain']}",
+            "code_interpreter_id": code_interpreter_id
         })
         
         # Log the OpenSearch collection ARN for verification

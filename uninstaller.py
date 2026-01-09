@@ -27,6 +27,7 @@ ec2_client = boto3.client("ec2", region_name=region)
 elbv2_client = boto3.client("elbv2", region_name=region)
 cloudfront_client = boto3.client("cloudfront", region_name=region)
 bedrock_agent_client = boto3.client("bedrock-agent", region_name=region)
+bedrock_agentcore_client = boto3.client("bedrock-agentcore-control", region_name=region)
 
 # Get account ID if not set
 if not account_id:
@@ -692,6 +693,101 @@ def delete_knowledge_bases():
     except Exception as e:
         logger.error(f"Error deleting Knowledge Bases: {e}")
 
+def delete_code_interpreters():
+    """Delete Code Interpreters."""
+    logger.info("[5.6/9] Deleting Code Interpreters")
+    
+    try:
+        # List all code interpreters
+        try:
+            # Try to list code interpreters
+            # Note: If list API doesn't exist, we'll try to delete by name
+            try:
+                response = bedrock_agentcore_client.list_code_interpreters()
+                code_interpreters = response.get("codeInterpreters", [])
+            except ClientError as e:
+                # If list API doesn't exist, try to describe by name
+                if e.response["Error"]["Code"] == "InvalidRequestException" or "not found" in str(e).lower():
+                    logger.debug("  List API not available, trying to delete by name")
+                    code_interpreters = []
+                else:
+                    raise
+            
+            # Find code interpreters matching project name
+            ci_to_delete = []
+            for ci in code_interpreters:
+                if ci.get("name") == project_name or project_name in ci.get("name", ""):
+                    ci_id = ci.get("codeInterpreterId") or ci.get("id")
+                    if ci_id:
+                        ci_to_delete.append(ci_id)
+                        logger.info(f"  Code Interpreter found: {ci_id}")
+            
+            # If no code interpreters found in list, try to delete by name directly
+            if not ci_to_delete:
+                logger.info(f"  Trying to delete code interpreter by name: {project_name}")
+                try:
+                    # Try to describe code interpreter by name
+                    response = bedrock_agentcore_client.describe_code_interpreter(
+                        codeInterpreterId=project_name
+                    )
+                    ci_id = response.get("codeInterpreterId") or response.get("id")
+                    if ci_id:
+                        ci_to_delete.append(ci_id)
+                        logger.info(f"  Code Interpreter found: {ci_id}")
+                except ClientError as e:
+                    if e.response["Error"]["Code"] == "ResourceNotFoundException":
+                        logger.info(f"  No Code Interpreter found with name: {project_name}")
+                    else:
+                        logger.warning(f"  Could not describe code interpreter: {e}")
+            
+            if not ci_to_delete:
+                logger.info(f"  No Code Interpreter found to delete")
+                return
+            
+            # Delete each code interpreter
+            for ci_id in ci_to_delete:
+                try:
+                    logger.info(f"  Deleting Code Interpreter: {ci_id}")
+                    bedrock_agentcore_client.delete_code_interpreter(
+                        codeInterpreterId=ci_id
+                    )
+                    logger.info(f"  ✓ Deleted Code Interpreter: {ci_id}")
+                    
+                    # Wait for deletion to complete
+                    logger.debug("    Waiting for Code Interpreter deletion to complete...")
+                    max_wait = 60  # Wait up to 60 seconds
+                    waited = 0
+                    while waited < max_wait:
+                        try:
+                            response = bedrock_agentcore_client.describe_code_interpreter(
+                                codeInterpreterId=ci_id
+                            )
+                            status = response.get("status", "")
+                            if status == "DELETED":
+                                break
+                            time.sleep(5)
+                            waited += 5
+                        except ClientError as e:
+                            if e.response["Error"]["Code"] == "ResourceNotFoundException":
+                                logger.debug("    Code Interpreter deletion confirmed")
+                                break
+                            raise
+                    
+                except ClientError as e:
+                    if e.response["Error"]["Code"] == "ResourceNotFoundException":
+                        logger.debug(f"  Code Interpreter {ci_id} already deleted")
+                    else:
+                        logger.warning(f"  Could not delete Code Interpreter {ci_id}: {e}")
+                except Exception as e:
+                    logger.warning(f"  Error deleting Code Interpreter {ci_id}: {e}")
+            
+            logger.info("✓ Code Interpreters deleted")
+        except Exception as e:
+            logger.warning(f"  Could not list Code Interpreters: {e}")
+            
+    except Exception as e:
+        logger.error(f"Error deleting Code Interpreters: {e}")
+
 def delete_secrets():
     """Delete Secrets Manager secrets."""
     logger.info("[6/9] Deleting secrets")
@@ -729,7 +825,8 @@ def delete_iam_roles():
         f"role-agent-for-{project_name}-{region}",
         f"role-ec2-for-{project_name}-{region}",
         f"role-lambda-rag-for-{project_name}-{region}",
-        f"role-agentcore-memory-for-{project_name}-{region}"
+        f"role-agentcore-memory-for-{project_name}-{region}",
+        f"role-code-interpreter-for-{project_name}-{region}"
     ]
     
     for role_name in role_names:
@@ -857,6 +954,7 @@ def main():
         delete_vpc_resources()
         delete_opensearch_collection()
         delete_knowledge_bases()
+        delete_code_interpreters()
         delete_secrets()
         delete_iam_roles()
         delete_s3_buckets()
