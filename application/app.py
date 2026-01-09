@@ -83,7 +83,7 @@ with st.sidebar:
 
         # Change radio to checkbox
         mcp_options = [
-            "tavily-search", "agentcore_coder", "사용자 설정"
+            "kb-retriever", "tavily-search", "agentcore_coder", "사용자 설정"
         ]
         mcp_selections = {}
         default_selections = ["tavily-search"]

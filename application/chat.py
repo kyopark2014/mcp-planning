@@ -1020,12 +1020,12 @@ async def run_langgraph_agent_with_plan(query, mcp_servers, containers):
         result = "답변을 찾지 못하였습니다."        
     logger.info(f"result: {result}")
 
-    # if references:
-    #     ref = "\n\n### Reference\n"
-    #     for i, reference in enumerate(references):
-    #         page_content = reference['content'][:100].replace("\n", "")
-    #         ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
-    #     result += ref
+    if references:
+        ref = "\n\n### Reference\n"
+        for i, reference in enumerate(references):
+            page_content = reference['content'][:100].replace("\n", "")
+            ref += f"{i+1}. [{reference['title']}]({reference['url']}), {page_content}...\n"    
+        result += ref
     
     if containers is not None:
         containers['notification'][index].markdown(result)

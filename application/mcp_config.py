@@ -92,6 +92,16 @@ def load_config(mcp_type):
             }
         }
     
+    elif mcp_type == "kb-retriever":
+        return {
+            "mcpServers": {
+                "kb_retriever": {
+                    "command": "python",
+                    "args": [f"{workingDir}/mcp_server_retrieve.py"]
+                }
+            }
+        }
+
     elif mcp_type == "agentcore_coder":
         return {
             "mcpServers": {
