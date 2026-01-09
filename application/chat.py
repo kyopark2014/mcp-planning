@@ -650,11 +650,40 @@ def get_tool_info(tool_name, tool_content):
                             "title": title,
                             "content": content_text
                         })
-            else:
-                logger.info(f"json_data is not a dict: {json_data}")
-
+            elif isinstance(json_data, list):
+                logger.info(f"json_data is a list: {json_data}")
                 for item in json_data:
-                    if "reference" in item and "contents" in item:
+                    if isinstance(item, dict) and "text" in item:
+                        try:
+                            # text 필드 안의 JSON 문자열 파싱
+                            text_json = json.loads(item["text"])
+                            if isinstance(text_json, list):
+                                # 파싱된 JSON이 리스트인 경우
+                                for ref_item in text_json:
+                                    if isinstance(ref_item, dict) and "reference" in ref_item and "contents" in ref_item:
+                                        url = ref_item["reference"]["url"]
+                                        title = ref_item["reference"]["title"]
+                                        content_text = ref_item["contents"][:100] + "..." if len(ref_item["contents"]) > 100 else ref_item["contents"]
+                                        tool_references.append({
+                                            "url": url,
+                                            "title": title,
+                                            "content": content_text
+                                        })
+                            elif isinstance(text_json, dict) and "reference" in text_json and "contents" in text_json:
+                                # 파싱된 JSON이 딕셔너리인 경우
+                                url = text_json["reference"]["url"]
+                                title = text_json["reference"]["title"]
+                                content_text = text_json["contents"][:100] + "..." if len(text_json["contents"]) > 100 else text_json["contents"]
+                                tool_references.append({
+                                    "url": url,
+                                    "title": title,
+                                    "content": content_text
+                                })
+                        except (json.JSONDecodeError, TypeError) as e:
+                            logger.warning(f"Failed to parse text JSON: {e}")
+                            pass
+                    elif isinstance(item, dict) and "reference" in item and "contents" in item:
+                        # 리스트 항목이 직접 reference를 가지고 있는 경우
                         url = item["reference"]["url"]
                         title = item["reference"]["title"]
                         content_text = item["contents"][:100] + "..." if len(item["contents"]) > 100 else item["contents"]
@@ -663,6 +692,7 @@ def get_tool_info(tool_name, tool_content):
                             "title": title,
                             "content": content_text
                         })
+            
                 
             logger.info(f"tool_references: {tool_references}")
 
