@@ -2906,8 +2906,8 @@ def create_agentcore_memory_role() -> str:
 
 
 def create_cloudfront_distribution(alb_info: Dict[str, str], s3_bucket_name: str) -> Dict[str, str]:
-    """Create CloudFront distribution."""
-    logger.info("[7/10] Creating CloudFront distribution")
+    """Create CloudFront distribution with hybrid ALB + S3 origins."""
+    logger.info("[7/10] Creating CloudFront distribution (ALB + S3 hybrid)")
     
     # Check if CloudFront distribution already exists
     try:
@@ -2923,10 +2923,52 @@ def create_cloudfront_distribution(alb_info: Dict[str, str], s3_bucket_name: str
     except Exception as e:
         logger.debug(f"Error checking existing distributions: {e}")
     
-    # Create CloudFront distribution
+    # Create Origin Access Identity for S3
+    logger.info("  Creating Origin Access Identity for S3...")
+    try:
+        oai_response = cloudfront_client.create_cloud_front_origin_access_identity(
+            CloudFrontOriginAccessIdentityConfig={
+                "CallerReference": f"{project_name}-s3-oai-{int(time.time())}",
+                "Comment": f"OAI for {project_name} S3 bucket"
+            }
+        )
+        oai_id = oai_response["CloudFrontOriginAccessIdentity"]["Id"]
+        logger.info(f"  ✓ Created Origin Access Identity: {oai_id}")
+    except ClientError as e:
+        logger.error(f"Failed to create Origin Access Identity: {e}")
+        raise
+    
+    # Update S3 bucket policy to allow CloudFront access
+    logger.info("  Updating S3 bucket policy for CloudFront access...")
+    bucket_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AllowCloudFrontAccess",
+                "Effect": "Allow",
+                "Principal": {
+                    "AWS": f"arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity {oai_id}"
+                },
+                "Action": "s3:GetObject",
+                "Resource": f"arn:aws:s3:::{s3_bucket_name}/*"
+            }
+        ]
+    }
+    
+    try:
+        s3_client.put_bucket_policy(
+            Bucket=s3_bucket_name,
+            Policy=json.dumps(bucket_policy)
+        )
+        logger.info(f"  ✓ Updated S3 bucket policy")
+    except ClientError as e:
+        logger.error(f"Failed to update S3 bucket policy: {e}")
+        raise
+    
+    # Create CloudFront distribution with hybrid ALB + S3 origins
     distribution_config = {
         "CallerReference": f"{project_name}-{int(time.time())}",
-        "Comment": f"CloudFront-for-{project_name}",
+        "Comment": f"CloudFront-for-{project_name}-Hybrid",
         "DefaultCacheBehavior": {
             "TargetOriginId": f"alb-{project_name}",
             "ViewerProtocolPolicy": "redirect-to-https",
@@ -2942,8 +2984,28 @@ def create_cloudfront_distribution(alb_info: Dict[str, str], s3_bucket_name: str
             "OriginRequestPolicyId": "216adef6-5c7f-47e4-b989-5492eafa07d3",
             "Compress": True
         },
-        "Origins": {
+        "CacheBehaviors": {
             "Quantity": 1,
+            "Items": [
+                {
+                    "PathPattern": "/images/*",
+                    "TargetOriginId": f"s3-{project_name}",
+                    "ViewerProtocolPolicy": "redirect-to-https",
+                    "AllowedMethods": {
+                        "Quantity": 2,
+                        "Items": ["GET", "HEAD"],
+                        "CachedMethods": {
+                            "Quantity": 2,
+                            "Items": ["GET", "HEAD"]
+                        }
+                    },
+                    "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+                    "Compress": True
+                }
+            ]
+        },
+        "Origins": {
+            "Quantity": 2,
             "Items": [
                 {
                     "Id": f"alb-{project_name}",
@@ -2952,6 +3014,13 @@ def create_cloudfront_distribution(alb_info: Dict[str, str], s3_bucket_name: str
                         "HTTPPort": 80,
                         "HTTPSPort": 443,
                         "OriginProtocolPolicy": "http-only"
+                    }
+                },
+                {
+                    "Id": f"s3-{project_name}",
+                    "DomainName": f"{s3_bucket_name}.s3.{region}.amazonaws.com",
+                    "S3OriginConfig": {
+                        "OriginAccessIdentity": f"origin-access-identity/cloudfront/{oai_id}"
                     }
                 }
             ]
@@ -2965,8 +3034,10 @@ def create_cloudfront_distribution(alb_info: Dict[str, str], s3_bucket_name: str
         distribution_id = response["Distribution"]["Id"]
         distribution_domain = response["Distribution"]["DomainName"]
         
-        logger.info(f"✓ CloudFront distribution created: {distribution_domain}")
+        logger.info(f"✓ CloudFront distribution created (ALB + S3): {distribution_domain}")
         logger.info(f"  Distribution ID: {distribution_id}")
+        logger.info(f"  Default origin: ALB {alb_info['dns']}")
+        logger.info(f"  /images/* origin: S3 bucket {s3_bucket_name}")
         logger.warning("  Note: CloudFront distribution may take 15-20 minutes to deploy")
         return {
             "id": distribution_id,
