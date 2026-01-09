@@ -114,7 +114,6 @@ def get_model():
             max_tokens=maxOutputTokens,
             stop_sequences = [STOP_SEQUENCE],
             temperature = 0.1,
-            top_p = 0.9,
             additional_request_fields={
                 "thinking": {
                     "type": "disabled"

@@ -1,0 +1,89 @@
+2026-01-09 20:47:50 - INFO - ============================================================
+2026-01-09 20:47:50 - INFO - Starting AWS Infrastructure Deployment
+2026-01-09 20:47:50 - INFO - ============================================================
+2026-01-09 20:47:50 - INFO - Project: planning
+2026-01-09 20:47:50 - INFO - Region: us-west-2
+2026-01-09 20:47:50 - INFO - Account ID: 262976740991
+2026-01-09 20:47:50 - INFO - Bucket Name: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:47:50 - INFO - ============================================================
+2026-01-09 20:47:50 - INFO - [1/10] Creating S3 bucket: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:47:50 - WARNING - S3 bucket already exists: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:47:51 - INFO - S3 bucket created...
+2026-01-09 20:47:51 - INFO - [2/10] Creating Knowledge Base IAM role
+2026-01-09 20:47:51 - WARNING - IAM role already exists: role-knowledge-base-for-planning-us-west-2
+2026-01-09 20:47:53 - INFO - [2/10] Creating Agent IAM role
+2026-01-09 20:47:53 - WARNING - IAM role already exists: role-agent-for-planning-us-west-2
+2026-01-09 20:47:54 - INFO - [2/10] Creating EC2 IAM role
+2026-01-09 20:47:55 - WARNING - IAM role already exists: role-ec2-for-planning-us-west-2
+2026-01-09 20:47:59 - INFO - IAM roles created...
+2026-01-09 20:47:59 - INFO - [3/10] Creating Secrets Manager secrets
+2026-01-09 20:47:59 - INFO - Please enter API keys when prompted (press Enter to skip and leave empty):
+2026-01-09 20:47:59 - WARNING -   Secret already exists: openweathermap-planning
+2026-01-09 20:47:59 - WARNING -   Secret already exists: tavilyapikey-planning
+2026-01-09 20:47:59 - INFO - ✓ Created 2 secrets
+2026-01-09 20:47:59 - INFO - Secrets created...
+2026-01-09 20:47:59 - INFO - [4/10] Creating OpenSearch Serverless collection
+2026-01-09 20:48:00 - WARNING - OpenSearch collection already exists: planning
+2026-01-09 20:48:00 - INFO - OpenSearch collection created...
+2026-01-09 20:48:00 - INFO - [4.5/10] Creating Knowledge Base with OpenSearch collection
+2026-01-09 20:48:00 - INFO -   Creating vector index in OpenSearch collection...
+2026-01-09 20:48:00 - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2026-01-09 20:48:01 - INFO -   Checking if Knowledge Base already exists...
+2026-01-09 20:48:01 - WARNING - Knowledge Base already exists: CAPZR47HOP
+2026-01-09 20:48:02 - INFO - Knowledge Base is using correct OpenSearch collection
+2026-01-09 20:48:02 - INFO - Knowledge base created...
+2026-01-09 20:48:02 - INFO - [5/10] Creating VPC and networking resources
+2026-01-09 20:48:03 - INFO - Using CIDR block: 10.23.0.0/16
+2026-01-09 20:48:03 - WARNING - VPC already exists: vpc-047e74d286cf0a85b
+2026-01-09 20:48:04 - INFO - VPC created...
+2026-01-09 20:48:04 - INFO - [6/10] Creating Application Load Balancer
+2026-01-09 20:48:05 - WARNING - ALB already exists: alb-for-planning-1896602236.us-west-2.elb.amazonaws.com
+2026-01-09 20:48:05 - INFO - ALB created...
+2026-01-09 20:48:05 - INFO - [7/10] Creating CloudFront distribution (ALB + S3 hybrid)
+2026-01-09 20:48:06 - INFO -   Checking for existing Origin Access Identity for S3...
+2026-01-09 20:48:06 - INFO -   ✓ Using existing Origin Access Identity: E3ISS34MX0453A
+2026-01-09 20:48:06 - INFO -   Updating S3 bucket policy for CloudFront access...
+2026-01-09 20:48:06 - ERROR - Failed to update S3 bucket policy: An error occurred (MalformedPolicy) when calling the PutBucketPolicy operation: Invalid principal in policy
+2026-01-09 20:48:06 - ERROR - Canonical User ID: a665938ca6474cebb6f66e512be865a88edf3ce6b442ef2a80f913f6b47e00cae04c191ddcefeff3c0c17ea7314dbe85
+2026-01-09 20:48:06 - ERROR - Bucket Policy: {
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowCloudFrontAccess",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "a665938ca6474cebb6f66e512be865a88edf3ce6b442ef2a80f913f6b47e00cae04c191ddcefeff3c0c17ea7314dbe85"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::storage-for-planning-262976740991-us-west-2/*"
+    }
+  ]
+}
+2026-01-09 20:48:06 - ERROR - 
+2026-01-09 20:48:06 - ERROR - ============================================================
+2026-01-09 20:48:06 - ERROR - Deployment Failed!
+2026-01-09 20:48:06 - ERROR - ============================================================
+2026-01-09 20:48:06 - ERROR - Error: An error occurred (MalformedPolicy) when calling the PutBucketPolicy operation: Invalid principal in policy
+2026-01-09 20:48:06 - ERROR - Deployment time before failure: 0.28 minutes
+2026-01-09 20:48:06 - ERROR - ============================================================
+2026-01-09 20:48:06 - ERROR - Traceback (most recent call last):
+  File "/Users/ksdyb/Documents/src/mcp-planning/installer.py", line 3960, in main
+    cloudfront_info = create_cloudfront_distribution(alb_info, s3_bucket_name)
+  File "/Users/ksdyb/Documents/src/mcp-planning/installer.py", line 2983, in create_cloudfront_distribution
+    s3_client.put_bucket_policy(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        Bucket=s3_bucket_name,
+        ^^^^^^^^^^^^^^^^^^^^^^
+        Policy=json.dumps(bucket_policy)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/client.py", line 602, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/client.py", line 1078, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.exceptions.ClientError: An error occurred (MalformedPolicy) when calling the PutBucketPolicy operation: Invalid principal in policy
+

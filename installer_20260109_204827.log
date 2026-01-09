@@ -1,0 +1,109 @@
+2026-01-09 20:48:27 - INFO - ============================================================
+2026-01-09 20:48:27 - INFO - Starting AWS Infrastructure Deployment
+2026-01-09 20:48:27 - INFO - ============================================================
+2026-01-09 20:48:27 - INFO - Project: planning
+2026-01-09 20:48:27 - INFO - Region: us-west-2
+2026-01-09 20:48:27 - INFO - Account ID: 262976740991
+2026-01-09 20:48:27 - INFO - Bucket Name: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:48:27 - INFO - ============================================================
+2026-01-09 20:48:27 - INFO - [1/10] Creating S3 bucket: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:48:28 - WARNING - S3 bucket already exists: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:48:28 - INFO - S3 bucket created...
+2026-01-09 20:48:28 - INFO - [2/10] Creating Knowledge Base IAM role
+2026-01-09 20:48:29 - WARNING - IAM role already exists: role-knowledge-base-for-planning-us-west-2
+2026-01-09 20:48:30 - INFO - [2/10] Creating Agent IAM role
+2026-01-09 20:48:31 - WARNING - IAM role already exists: role-agent-for-planning-us-west-2
+2026-01-09 20:48:32 - INFO - [2/10] Creating EC2 IAM role
+2026-01-09 20:48:33 - WARNING - IAM role already exists: role-ec2-for-planning-us-west-2
+2026-01-09 20:48:37 - INFO - IAM roles created...
+2026-01-09 20:48:37 - INFO - [3/10] Creating Secrets Manager secrets
+2026-01-09 20:48:37 - INFO - Please enter API keys when prompted (press Enter to skip and leave empty):
+2026-01-09 20:48:38 - WARNING -   Secret already exists: openweathermap-planning
+2026-01-09 20:48:38 - WARNING -   Secret already exists: tavilyapikey-planning
+2026-01-09 20:48:38 - INFO - ✓ Created 2 secrets
+2026-01-09 20:48:38 - INFO - Secrets created...
+2026-01-09 20:48:38 - INFO - [4/10] Creating OpenSearch Serverless collection
+2026-01-09 20:48:38 - WARNING - OpenSearch collection already exists: planning
+2026-01-09 20:48:39 - INFO - OpenSearch collection created...
+2026-01-09 20:48:39 - INFO - [4.5/10] Creating Knowledge Base with OpenSearch collection
+2026-01-09 20:48:39 - INFO -   Creating vector index in OpenSearch collection...
+2026-01-09 20:48:39 - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2026-01-09 20:48:40 - INFO -   Checking if Knowledge Base already exists...
+2026-01-09 20:48:40 - WARNING - Knowledge Base already exists: CAPZR47HOP
+2026-01-09 20:48:40 - INFO - Knowledge Base is using correct OpenSearch collection
+2026-01-09 20:48:40 - INFO - Knowledge base created...
+2026-01-09 20:48:40 - INFO - [5/10] Creating VPC and networking resources
+2026-01-09 20:48:41 - INFO - Using CIDR block: 10.23.0.0/16
+2026-01-09 20:48:41 - WARNING - VPC already exists: vpc-047e74d286cf0a85b
+2026-01-09 20:48:43 - INFO - VPC created...
+2026-01-09 20:48:43 - INFO - [6/10] Creating Application Load Balancer
+2026-01-09 20:48:43 - WARNING - ALB already exists: alb-for-planning-1896602236.us-west-2.elb.amazonaws.com
+2026-01-09 20:48:43 - INFO - ALB created...
+2026-01-09 20:48:43 - INFO - [7/10] Creating CloudFront distribution (ALB + S3 hybrid)
+2026-01-09 20:48:44 - INFO -   Checking for existing Origin Access Identity for S3...
+2026-01-09 20:48:45 - INFO -   ✓ Using existing Origin Access Identity: E3ISS34MX0453A
+2026-01-09 20:48:45 - INFO -   Updating S3 bucket policy for CloudFront access...
+2026-01-09 20:48:45 - INFO -   ✓ Updated S3 bucket policy
+2026-01-09 20:48:46 - INFO - ✓ CloudFront distribution created (ALB + S3): dbd07313pn2q1.cloudfront.net
+2026-01-09 20:48:46 - INFO -   Distribution ID: E1U1QOPG1RRC2V
+2026-01-09 20:48:46 - INFO -   Default origin: ALB alb-for-planning-1896602236.us-west-2.elb.amazonaws.com
+2026-01-09 20:48:46 - INFO -   /images/* origin: S3 bucket storage-for-planning-262976740991-us-west-2
+2026-01-09 20:48:46 - WARNING -   Note: CloudFront distribution may take 15-20 minutes to deploy
+2026-01-09 20:48:46 - INFO - CloudFront distribution created...
+2026-01-09 20:48:46 - INFO - [8/10] Creating EC2 instance
+2026-01-09 20:48:50 - INFO - ✓ EC2 instance created: i-0c5e8a04ace4021a4
+2026-01-09 20:48:50 - INFO -   Instance type: t3.medium
+2026-01-09 20:48:50 - INFO -   Deployed in private subnet: subnet-0a3fb44117e1ee8e3
+2026-01-09 20:48:50 - INFO -   User data script configured for application deployment
+2026-01-09 20:48:50 - INFO - EC2 instance created...
+2026-01-09 20:48:50 - INFO - [9/10] Creating ALB target group and listener
+2026-01-09 20:49:08 - INFO -   ✓ Registered EC2 instance i-0c5e8a04ace4021a4 to target group
+2026-01-09 20:49:08 - INFO -   ✓ Created rule for custom header
+2026-01-09 20:49:08 - INFO - ✓ ALB target group and listener created
+2026-01-09 20:49:08 - INFO -   Target group: arn:aws:elasticloadbalancing:us-west-2:262976740991:targetgroup/TG-for-planning/9bcdcb0ade55210d
+2026-01-09 20:49:08 - INFO -   Listener: arn:aws:elasticloadbalancing:us-west-2:262976740991:listener/app/alb-for-planning/c53b05aadabfbba4/92cf09f3bf6515fb
+2026-01-09 20:49:08 - INFO - ALB target group and listener created...
+2026-01-09 20:49:08 - INFO - Creating code interpreter: planning
+2026-01-09 20:49:08 - INFO - Creating Code Interpreter Execution IAM role
+2026-01-09 20:49:09 - INFO - ✓ IAM role created: role-code-interpreter-for-planning-us-west-2
+2026-01-09 20:49:09 - INFO -   Waiting for IAM role to propagate...
+2026-01-09 20:49:19 - INFO -   Waiting for IAM policy to propagate...
+2026-01-09 20:49:24 - INFO - Code interpreter role ARN: arn:aws:iam::262976740991:role/role-code-interpreter-for-planning-us-west-2
+2026-01-09 20:49:25 - WARNING - Code interpreter already exists: planning
+2026-01-09 20:49:25 - ERROR - 
+2026-01-09 20:49:25 - ERROR - ============================================================
+2026-01-09 20:49:25 - ERROR - Deployment Failed!
+2026-01-09 20:49:25 - ERROR - ============================================================
+2026-01-09 20:49:25 - ERROR - Error: 'BedrockAgentCoreControl' object has no attribute 'describe_code_interpreter'
+2026-01-09 20:49:25 - ERROR - Deployment time before failure: 0.96 minutes
+2026-01-09 20:49:25 - ERROR - ============================================================
+2026-01-09 20:49:25 - ERROR - Traceback (most recent call last):
+  File "/Users/ksdyb/Documents/src/mcp-planning/installer.py", line 3846, in create_code_interpreter
+    response = bedrock_agentcore_client.create_code_interpreter(
+        name=project_name,
+    ...<4 lines>...
+        executionRoleArn=code_interpreter_role_arn
+    )
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/client.py", line 602, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/client.py", line 1078, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.errorfactory.ConflictException: An error occurred (ConflictException) when calling the CreateCodeInterpreter operation: CodeInterpreter with name 'planning' already exists in this account
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ksdyb/Documents/src/mcp-planning/installer.py", line 3970, in main
+    code_interpreter_id = create_code_interpreter()
+  File "/Users/ksdyb/Documents/src/mcp-planning/installer.py", line 3867, in create_code_interpreter
+    response = bedrock_agentcore_client.describe_code_interpreter(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/client.py", line 969, in __getattr__
+    raise AttributeError(
+        f"'{self.__class__.__name__}' object has no attribute '{item}'"
+    )
+AttributeError: 'BedrockAgentCoreControl' object has no attribute 'describe_code_interpreter'. Did you mean: 'delete_code_interpreter'?
+

@@ -2923,23 +2923,41 @@ def create_cloudfront_distribution(alb_info: Dict[str, str], s3_bucket_name: str
     except Exception as e:
         logger.debug(f"Error checking existing distributions: {e}")
     
-    # Create Origin Access Identity for S3
-    logger.info("  Creating Origin Access Identity for S3...")
+    # Check for existing Origin Access Identity or create new one
+    logger.info("  Checking for existing Origin Access Identity for S3...")
+    oai_id = None
+    oai_canonical_user_id = None
+    
     try:
-        oai_response = cloudfront_client.create_cloud_front_origin_access_identity(
-            CloudFrontOriginAccessIdentityConfig={
-                "CallerReference": f"{project_name}-s3-oai-{int(time.time())}",
-                "Comment": f"OAI for {project_name} S3 bucket"
-            }
-        )
-        oai_id = oai_response["CloudFrontOriginAccessIdentity"]["Id"]
-        logger.info(f"  ✓ Created Origin Access Identity: {oai_id}")
+        # Check existing OAIs
+        oai_list = cloudfront_client.list_cloud_front_origin_access_identities()
+        for oai in oai_list.get("CloudFrontOriginAccessIdentityList", {}).get("Items", []):
+            if f"OAI for {project_name} S3 bucket" in oai.get("Comment", ""):
+                oai_id = oai["Id"]
+                oai_canonical_user_id = oai["S3CanonicalUserId"]
+                logger.info(f"  ✓ Using existing Origin Access Identity: {oai_id}")
+                break
+        
+        # Create new OAI if none exists
+        if not oai_id:
+            logger.info("  Creating new Origin Access Identity for S3...")
+            oai_response = cloudfront_client.create_cloud_front_origin_access_identity(
+                CloudFrontOriginAccessIdentityConfig={
+                    "CallerReference": f"{project_name}-s3-oai-{int(time.time())}",
+                    "Comment": f"OAI for {project_name} S3 bucket"
+                }
+            )
+            oai_id = oai_response["CloudFrontOriginAccessIdentity"]["Id"]
+            oai_canonical_user_id = oai_response["CloudFrontOriginAccessIdentity"]["S3CanonicalUserId"]
+            logger.info(f"  ✓ Created Origin Access Identity: {oai_id}")
+            
     except ClientError as e:
-        logger.error(f"Failed to create Origin Access Identity: {e}")
+        logger.error(f"Failed to handle Origin Access Identity: {e}")
         raise
     
     # Update S3 bucket policy to allow CloudFront access
     logger.info("  Updating S3 bucket policy for CloudFront access...")
+    
     bucket_policy = {
         "Version": "2012-10-17",
         "Statement": [
@@ -2963,6 +2981,8 @@ def create_cloudfront_distribution(alb_info: Dict[str, str], s3_bucket_name: str
         logger.info(f"  ✓ Updated S3 bucket policy")
     except ClientError as e:
         logger.error(f"Failed to update S3 bucket policy: {e}")
+        logger.error(f"OAI ID: {oai_id}")
+        logger.error(f"Bucket Policy: {json.dumps(bucket_policy, indent=2)}")
         raise
     
     # Create CloudFront distribution with hybrid ALB + S3 origins
@@ -3840,18 +3860,21 @@ def create_code_interpreter():
         error_code = e.response.get("Error", {}).get("Code", "")
         if error_code == "ConflictException":
             logger.warning(f"Code interpreter already exists: {project_name}")
-            # Try to get existing code interpreter
+            # Try to get existing code interpreter by listing all and finding by name
             try:
-                # Note: This assumes there's a list_code_interpreters API
-                # If not available, you may need to use describe_code_interpreter
-                response = bedrock_agentcore_client.describe_code_interpreter(
-                    codeInterpreterId=project_name
-                )
-                code_interpreter_id = response.get('codeInterpreterId')
-                logger.info(f"✓ Using existing code interpreter: {code_interpreter_id}")
-                return code_interpreter_id
-            except ClientError:
-                logger.error(f"Failed to get existing code interpreter: {e}")
+                list_response = bedrock_agentcore_client.list_code_interpreters()
+                for interpreter in list_response.get("codeInterpreterSummaries", []):
+                    if interpreter.get("name") == project_name:
+                        code_interpreter_id = interpreter["codeInterpreterId"]
+                        logger.info(f"✓ Using existing code interpreter: {code_interpreter_id}")
+                        return code_interpreter_id
+                
+                # If we get here, the interpreter exists but we couldn't find it
+                logger.error(f"Code interpreter '{project_name}' exists but couldn't retrieve ID")
+                raise Exception(f"Code interpreter '{project_name}' exists but couldn't retrieve ID")
+                
+            except ClientError as list_error:
+                logger.error(f"Failed to list code interpreters: {list_error}")
                 raise
         logger.error(f"Failed to create code interpreter: {e}")
         raise

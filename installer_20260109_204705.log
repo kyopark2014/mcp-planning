@@ -1,0 +1,61 @@
+2026-01-09 20:47:05 - INFO - ============================================================
+2026-01-09 20:47:05 - INFO - Starting AWS Infrastructure Deployment
+2026-01-09 20:47:05 - INFO - ============================================================
+2026-01-09 20:47:05 - INFO - Project: planning
+2026-01-09 20:47:05 - INFO - Region: us-west-2
+2026-01-09 20:47:05 - INFO - Account ID: 262976740991
+2026-01-09 20:47:05 - INFO - Bucket Name: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:47:05 - INFO - ============================================================
+2026-01-09 20:47:05 - INFO - [1/10] Creating S3 bucket: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:47:05 - WARNING - S3 bucket already exists: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:47:06 - INFO - S3 bucket created...
+2026-01-09 20:47:06 - INFO - [2/10] Creating Knowledge Base IAM role
+2026-01-09 20:47:06 - WARNING - IAM role already exists: role-knowledge-base-for-planning-us-west-2
+2026-01-09 20:47:08 - INFO - [2/10] Creating Agent IAM role
+2026-01-09 20:47:08 - WARNING - IAM role already exists: role-agent-for-planning-us-west-2
+2026-01-09 20:47:09 - INFO - [2/10] Creating EC2 IAM role
+2026-01-09 20:47:10 - WARNING - IAM role already exists: role-ec2-for-planning-us-west-2
+2026-01-09 20:47:14 - INFO - IAM roles created...
+2026-01-09 20:47:14 - INFO - [3/10] Creating Secrets Manager secrets
+2026-01-09 20:47:14 - INFO - Please enter API keys when prompted (press Enter to skip and leave empty):
+2026-01-09 20:47:15 - WARNING -   Secret already exists: openweathermap-planning
+2026-01-09 20:47:15 - WARNING -   Secret already exists: tavilyapikey-planning
+2026-01-09 20:47:15 - INFO - ✓ Created 2 secrets
+2026-01-09 20:47:15 - INFO - Secrets created...
+2026-01-09 20:47:15 - INFO - [4/10] Creating OpenSearch Serverless collection
+2026-01-09 20:47:15 - WARNING - OpenSearch collection already exists: planning
+2026-01-09 20:47:16 - INFO - OpenSearch collection created...
+2026-01-09 20:47:16 - INFO - [4.5/10] Creating Knowledge Base with OpenSearch collection
+2026-01-09 20:47:16 - INFO -   Creating vector index in OpenSearch collection...
+2026-01-09 20:47:16 - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2026-01-09 20:47:17 - INFO -   Checking if Knowledge Base already exists...
+2026-01-09 20:47:17 - WARNING - Knowledge Base already exists: CAPZR47HOP
+2026-01-09 20:47:17 - INFO - Knowledge Base is using correct OpenSearch collection
+2026-01-09 20:47:17 - INFO - Knowledge base created...
+2026-01-09 20:47:17 - INFO - [5/10] Creating VPC and networking resources
+2026-01-09 20:47:18 - INFO - Using CIDR block: 10.23.0.0/16
+2026-01-09 20:47:18 - WARNING - VPC already exists: vpc-047e74d286cf0a85b
+2026-01-09 20:47:20 - INFO -   Added internet gateway route to main route table: rtb-052ecf963d510aee3
+2026-01-09 20:47:20 - INFO - VPC created...
+2026-01-09 20:47:20 - INFO - [6/10] Creating Application Load Balancer
+2026-01-09 20:47:21 - WARNING - ALB already exists: alb-for-planning-1896602236.us-west-2.elb.amazonaws.com
+2026-01-09 20:47:21 - INFO - ALB created...
+2026-01-09 20:47:21 - INFO - [7/10] Creating CloudFront distribution (ALB + S3 hybrid)
+2026-01-09 20:47:22 - INFO -   Checking for existing Origin Access Identity for S3...
+2026-01-09 20:47:22 - INFO -   ✓ Using existing Origin Access Identity: E3ISS34MX0453A
+2026-01-09 20:47:22 - INFO -   Updating S3 bucket policy for CloudFront access...
+2026-01-09 20:47:22 - ERROR - Invalid canonical user ID: a665938ca6474cebb6f66e512be865a88edf3ce6b442ef2a80f913f6b47e00cae04c191ddcefeff3c0c17ea7314dbe85
+2026-01-09 20:47:22 - ERROR - 
+2026-01-09 20:47:22 - ERROR - ============================================================
+2026-01-09 20:47:22 - ERROR - Deployment Failed!
+2026-01-09 20:47:22 - ERROR - ============================================================
+2026-01-09 20:47:22 - ERROR - Error: Invalid canonical user ID from OAI
+2026-01-09 20:47:22 - ERROR - Deployment time before failure: 0.29 minutes
+2026-01-09 20:47:22 - ERROR - ============================================================
+2026-01-09 20:47:22 - ERROR - Traceback (most recent call last):
+  File "/Users/ksdyb/Documents/src/mcp-planning/installer.py", line 3959, in main
+    cloudfront_info = create_cloudfront_distribution(alb_info, s3_bucket_name)
+  File "/Users/ksdyb/Documents/src/mcp-planning/installer.py", line 2964, in create_cloudfront_distribution
+    raise ValueError("Invalid canonical user ID from OAI")
+ValueError: Invalid canonical user ID from OAI
+

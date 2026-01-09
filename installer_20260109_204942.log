@@ -1,0 +1,105 @@
+2026-01-09 20:49:42 - INFO - ============================================================
+2026-01-09 20:49:42 - INFO - Starting AWS Infrastructure Deployment
+2026-01-09 20:49:42 - INFO - ============================================================
+2026-01-09 20:49:42 - INFO - Project: planning
+2026-01-09 20:49:42 - INFO - Region: us-west-2
+2026-01-09 20:49:42 - INFO - Account ID: 262976740991
+2026-01-09 20:49:42 - INFO - Bucket Name: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:49:42 - INFO - ============================================================
+2026-01-09 20:49:42 - INFO - [1/10] Creating S3 bucket: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:49:43 - WARNING - S3 bucket already exists: storage-for-planning-262976740991-us-west-2
+2026-01-09 20:49:43 - INFO - S3 bucket created...
+2026-01-09 20:49:43 - INFO - [2/10] Creating Knowledge Base IAM role
+2026-01-09 20:49:44 - WARNING - IAM role already exists: role-knowledge-base-for-planning-us-west-2
+2026-01-09 20:49:46 - INFO - [2/10] Creating Agent IAM role
+2026-01-09 20:49:46 - WARNING - IAM role already exists: role-agent-for-planning-us-west-2
+2026-01-09 20:49:47 - INFO - [2/10] Creating EC2 IAM role
+2026-01-09 20:49:48 - WARNING - IAM role already exists: role-ec2-for-planning-us-west-2
+2026-01-09 20:49:52 - INFO - IAM roles created...
+2026-01-09 20:49:52 - INFO - [3/10] Creating Secrets Manager secrets
+2026-01-09 20:49:52 - INFO - Please enter API keys when prompted (press Enter to skip and leave empty):
+2026-01-09 20:49:53 - WARNING -   Secret already exists: openweathermap-planning
+2026-01-09 20:49:53 - WARNING -   Secret already exists: tavilyapikey-planning
+2026-01-09 20:49:53 - INFO - ✓ Created 2 secrets
+2026-01-09 20:49:53 - INFO - Secrets created...
+2026-01-09 20:49:53 - INFO - [4/10] Creating OpenSearch Serverless collection
+2026-01-09 20:49:53 - WARNING - OpenSearch collection already exists: planning
+2026-01-09 20:49:54 - INFO - OpenSearch collection created...
+2026-01-09 20:49:54 - INFO - [4.5/10] Creating Knowledge Base with OpenSearch collection
+2026-01-09 20:49:54 - INFO -   Creating vector index in OpenSearch collection...
+2026-01-09 20:49:54 - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2026-01-09 20:49:55 - INFO -   Checking if Knowledge Base already exists...
+2026-01-09 20:49:55 - WARNING - Knowledge Base already exists: CAPZR47HOP
+2026-01-09 20:49:55 - INFO - Knowledge Base is using correct OpenSearch collection
+2026-01-09 20:49:55 - INFO - Knowledge base created...
+2026-01-09 20:49:55 - INFO - [5/10] Creating VPC and networking resources
+2026-01-09 20:49:56 - INFO - Using CIDR block: 10.23.0.0/16
+2026-01-09 20:49:56 - WARNING - VPC already exists: vpc-047e74d286cf0a85b
+2026-01-09 20:49:58 - INFO - VPC created...
+2026-01-09 20:49:58 - INFO - [6/10] Creating Application Load Balancer
+2026-01-09 20:49:58 - WARNING - ALB already exists: alb-for-planning-1896602236.us-west-2.elb.amazonaws.com
+2026-01-09 20:49:58 - INFO - ALB created...
+2026-01-09 20:49:58 - INFO - [7/10] Creating CloudFront distribution (ALB + S3 hybrid)
+2026-01-09 20:50:00 - WARNING - CloudFront distribution already exists: dbd07313pn2q1.cloudfront.net
+2026-01-09 20:50:00 - INFO - CloudFront distribution created...
+2026-01-09 20:50:00 - INFO - [8/10] Creating EC2 instance
+2026-01-09 20:50:00 - WARNING - EC2 instance already exists: i-0c5e8a04ace4021a4
+2026-01-09 20:50:00 - INFO - EC2 instance created...
+2026-01-09 20:50:00 - INFO - [9/10] Creating ALB target group and listener
+2026-01-09 20:50:00 - WARNING -   Target group already exists: arn:aws:elasticloadbalancing:us-west-2:262976740991:targetgroup/TG-for-planning/9bcdcb0ade55210d
+2026-01-09 20:50:00 - WARNING -   EC2 instance i-0c5e8a04ace4021a4 is already registered in target group
+2026-01-09 20:50:00 - WARNING -   Listener already exists on port 80: arn:aws:elasticloadbalancing:us-west-2:262976740991:listener/app/alb-for-planning/c53b05aadabfbba4/92cf09f3bf6515fb
+2026-01-09 20:50:01 - WARNING -   Rule with Priority 10 for custom header already exists: arn:aws:elasticloadbalancing:us-west-2:262976740991:listener-rule/app/alb-for-planning/c53b05aadabfbba4/92cf09f3bf6515fb/7a66a7eecd6b95c8
+2026-01-09 20:50:01 - INFO - ✓ ALB target group and listener created
+2026-01-09 20:50:01 - INFO -   Target group: arn:aws:elasticloadbalancing:us-west-2:262976740991:targetgroup/TG-for-planning/9bcdcb0ade55210d
+2026-01-09 20:50:01 - INFO -   Listener: arn:aws:elasticloadbalancing:us-west-2:262976740991:listener/app/alb-for-planning/c53b05aadabfbba4/92cf09f3bf6515fb
+2026-01-09 20:50:01 - INFO - ALB target group and listener created...
+2026-01-09 20:50:01 - INFO - Creating code interpreter: planning
+2026-01-09 20:50:01 - INFO - Creating Code Interpreter Execution IAM role
+2026-01-09 20:50:01 - WARNING - IAM role already exists: role-code-interpreter-for-planning-us-west-2
+2026-01-09 20:50:01 - INFO -   Waiting for IAM role to propagate...
+2026-01-09 20:50:11 - INFO -   Waiting for IAM policy to propagate...
+2026-01-09 20:50:16 - INFO - Code interpreter role ARN: arn:aws:iam::262976740991:role/role-code-interpreter-for-planning-us-west-2
+2026-01-09 20:50:17 - WARNING - Code interpreter already exists: planning
+2026-01-09 20:50:17 - ERROR - Failed to get existing code interpreter: An error occurred (ConflictException) when calling the CreateCodeInterpreter operation: CodeInterpreter with name 'planning' already exists in this account
+2026-01-09 20:50:17 - ERROR - 
+2026-01-09 20:50:17 - ERROR - ============================================================
+2026-01-09 20:50:17 - ERROR - Deployment Failed!
+2026-01-09 20:50:17 - ERROR - ============================================================
+2026-01-09 20:50:17 - ERROR - Error: An error occurred (AccessDeniedException) when calling the GetCodeInterpreter operation: RelativeId does not match custom code interpreter ARN format: code-interpreter-custom/planning
+2026-01-09 20:50:17 - ERROR - Deployment time before failure: 0.58 minutes
+2026-01-09 20:50:17 - ERROR - ============================================================
+2026-01-09 20:50:17 - ERROR - Traceback (most recent call last):
+  File "/Users/ksdyb/Documents/src/mcp-planning/installer.py", line 3846, in create_code_interpreter
+    response = bedrock_agentcore_client.create_code_interpreter(
+        name=project_name,
+    ...<4 lines>...
+        executionRoleArn=code_interpreter_role_arn
+    )
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/client.py", line 602, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/client.py", line 1078, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.errorfactory.ConflictException: An error occurred (ConflictException) when calling the CreateCodeInterpreter operation: CodeInterpreter with name 'planning' already exists in this account
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ksdyb/Documents/src/mcp-planning/installer.py", line 3970, in main
+    code_interpreter_id = create_code_interpreter()
+  File "/Users/ksdyb/Documents/src/mcp-planning/installer.py", line 3867, in create_code_interpreter
+    response = bedrock_agentcore_client.get_code_interpreter(
+        codeInterpreterId=project_name
+    )
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/client.py", line 602, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/opt/homebrew/lib/python3.13/site-packages/botocore/client.py", line 1078, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.errorfactory.AccessDeniedException: An error occurred (AccessDeniedException) when calling the GetCodeInterpreter operation: RelativeId does not match custom code interpreter ARN format: code-interpreter-custom/planning
+
