@@ -3033,6 +3033,10 @@ def create_cloudfront_distribution(alb_info: Dict[str, str], s3_bucket_name: str
     }
     
     try:
+        # Wait for OAI to propagate before applying bucket policy
+        logger.info("  Waiting for OAI to propagate...")
+        time.sleep(10)
+        
         s3_client.put_bucket_policy(
             Bucket=s3_bucket_name,
             Policy=json.dumps(bucket_policy)
